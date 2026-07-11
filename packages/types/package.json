@@ -6,20 +6,13 @@
     "build": "tsc"
   },
   "exports": {
-    "./add": {
-      "types": "./src/add.ts",
-      "default": "./dist/add.js"
-    },
-    "./subtract": {
-      "types": "./src/subtract.ts",
-      "default": "./dist/subtract.js"
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
     }
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "typescript": "latest"
-  },
-  "dependencies": {
-    "zod": "^4.4.3"
   }
 }

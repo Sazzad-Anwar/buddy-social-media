@@ -13,10 +13,11 @@ import { CreateUserDto } from '../user/dto';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto';
 import { Role } from '../enums/role.enum';
-
-const SALT_ROUNDS = 10;
-const TOKEN_EXPIRY_DAYS = 7;
-const ACCESS_TOKEN_EXPIRY = '15m';
+import {
+  ACCESS_TOKEN_EXPIRY_IN_MINUTES,
+  SALT_ROUNDS,
+  TOKEN_EXPIRY_DAYS,
+} from '../lib/constants';
 
 @Injectable()
 export class AuthService {
@@ -142,7 +143,7 @@ export class AuthService {
     return {
       access_token: this.jwt.sign(
         { sub: user.id },
-        { expiresIn: ACCESS_TOKEN_EXPIRY },
+        { expiresIn: `${ACCESS_TOKEN_EXPIRY_IN_MINUTES}m` },
       ),
       refresh_token: refreshToken,
     };
@@ -168,7 +169,7 @@ export class AuthService {
     return {
       access_token: this.jwt.sign(
         { sub: user.id },
-        { expiresIn: ACCESS_TOKEN_EXPIRY },
+        { expiresIn: `${ACCESS_TOKEN_EXPIRY_IN_MINUTES}m` },
       ),
       refresh_token: refreshToken,
     };
@@ -178,6 +179,9 @@ export class AuthService {
    * Regenerates tokens using a refresh token.
    */
   async regenerateTokens(refreshToken: string, userAgent: IResult) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
     const tokenRecord = await this.db.refreshToken.findUnique({
       where: { token: refreshToken },
       include: { user: true },
@@ -199,7 +203,7 @@ export class AuthService {
     return {
       access_token: this.jwt.sign(
         { sub: tokenRecord.userId },
-        { expiresIn: ACCESS_TOKEN_EXPIRY },
+        { expiresIn: `${ACCESS_TOKEN_EXPIRY_IN_MINUTES}m` },
       ),
       refresh_token: newRefreshToken,
     };

@@ -6,16 +6,17 @@ import {
   Patch,
   Body,
   Req,
-} from '@nestjs/common'
-import { UserService } from './user.service'
-import { UpdateUserDto, type User } from './dto'
-import { Roles } from '../decorators/roles.decorator'
-import { Role } from '../enums/role.enum'
-import type { Request } from 'express'
+} from '@nestjs/common';
+import { UserService } from './user.service';
+import { UpdateUserDto } from './dto';
+import { Roles } from '../decorators/roles.decorator';
+import { Role } from '../enums/role.enum';
+import type { Request } from 'express';
+import type { User } from '@repo/types';
 
 export type AuthRequest = Request & {
-  user: User
-}
+  user: User;
+};
 
 @Controller('user')
 export class UserController {
@@ -23,18 +24,18 @@ export class UserController {
 
   @Get()
   findAll() {
-    return this.userService.findAll()
+    return this.userService.findAll();
   }
 
   @Get('me')
   @Roles(Role.USER)
   find(@Req() req: AuthRequest) {
-    return this.userService.findMe(req.user)
+    return this.userService.findMe(req.user);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: AuthRequest) {
-    return this.userService.findOne(+id, req.user)
+    return this.userService.findOne(+id, req.user);
   }
 
   @Patch(':id')
@@ -43,11 +44,11 @@ export class UserController {
     @Body() updateUserDto: UpdateUserDto,
     @Req() req: AuthRequest,
   ) {
-    return this.userService.update(+id, updateUserDto, req.user)
+    return this.userService.update(+id, updateUserDto, req.user);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req: AuthRequest) {
-    return this.userService.remove(+id, req.user)
+    return this.userService.remove(+id, req.user);
   }
 }

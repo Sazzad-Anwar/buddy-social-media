@@ -2,9 +2,13 @@ import { Body, Controller, Post, Req, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
 import { UAParser } from 'ua-parser-js';
-import { LoginDto, RefreshTokenDto } from './dto';
+import { LoginDto } from './dto';
 import { Public } from '../decorators/isPublic.decorator';
 import { CreateUserDto } from '../user/dto';
+import {
+  ACCESS_TOKEN_EXPIRY_IN_MINUTES,
+  TOKEN_EXPIRY_DAYS,
+} from '../lib/constants';
 
 @Controller('auth')
 export class AuthController {
@@ -28,7 +32,15 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+      maxAge: TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+    });
+    res.cookie('access_token', result.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: ACCESS_TOKEN_EXPIRY_IN_MINUTES * 60 * 1000,
     });
 
     return res.json({ access_token: result.access_token });
@@ -49,7 +61,16 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
+      maxAge: TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.cookie('access_token', result.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: ACCESS_TOKEN_EXPIRY_IN_MINUTES * 60 * 1000,
     });
 
     return res.json({ access_token: result?.access_token });
@@ -70,8 +91,18 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+      maxAge: TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
     });
+
+    res.cookie('access_token', result.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: ACCESS_TOKEN_EXPIRY_IN_MINUTES * 60 * 1000,
+    });
+
     return res.json({ access_token: result.access_token });
   }
 }

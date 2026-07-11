@@ -3,9 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateUserDto, UpdateUserDto, type User } from './dto';
+import { CreateUserDto, UpdateUserDto } from './dto';
 import { PrismaService } from '../db.service';
 import { Role } from '../enums/role.enum';
+import type { User } from '@repo/types';
 
 @Injectable()
 export class UserService {

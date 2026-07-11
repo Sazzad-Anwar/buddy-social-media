@@ -131,6 +131,7 @@ ul {
     --bcolor1: #F0F2F5;
     --bcolor2: #E8E8E8;
     --bcolor2: #F5F5F5;
+    --error-color: #ee4b2b;
 }
 
 ._layout {
