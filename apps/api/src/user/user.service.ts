@@ -2,52 +2,51 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-} from "@nestjs/common";
-import { CreateUserDto, UpdateUserDto, type User } from "./dto";
-import { PrismaService } from "../db.service";
-import { Role } from "../enums/role.enum";
+} from '@nestjs/common';
+import { CreateUserDto, UpdateUserDto, type User } from './dto';
+import { PrismaService } from '../db.service';
+import { Role } from '../enums/role.enum';
 
 @Injectable()
 export class UserService {
   constructor(private readonly db: PrismaService) {}
 
   public async findOneAndReturn(id: number) {
-    const user = await this.db.user.findUnique({
+    const user = await this.db.users.findUnique({
       where: { id },
       select: {
         id: true,
         email: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         role: true,
       },
     });
     if (!user?.id) {
-      throw new NotFoundException("User is not found");
+      throw new NotFoundException('User is not found');
     }
     return user;
   }
 
   public isLoggedInUser(loggedInUser: User, id: number) {
-    if (
-      id !== loggedInUser.id &&
-      loggedInUser.role !== (Role.ADMIN as string)
-    ) {
+    if (id !== loggedInUser.id) {
       throw new ForbiddenException();
     }
   }
 
   async create(createUserDto: CreateUserDto) {
-    return await this.db.user.create({
+    return await this.db.users.create({
       data: createUserDto,
     });
   }
 
   async findAll() {
-    return await this.db.user.findMany({
+    return await this.db.users.findMany({
       select: {
         id: true,
         email: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         role: true,
       },
     });
@@ -66,17 +65,18 @@ export class UserService {
     this.isLoggedInUser(loggedInUser, id);
     const user = await this.findOneAndReturn(id);
 
-    return await this.db.user.update({
+    return await this.db.users.update({
       where: { id },
       data: {
-        name: updateUserDto.name ?? user.name,
+        firstName: updateUserDto.firstName ?? user.firstName,
+        lastName: updateUserDto.lastName ?? user.lastName,
         email: updateUserDto?.email ?? user.email,
-        role: updateUserDto?.role ?? user.role,
       },
       select: {
         id: true,
         email: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         role: true,
       },
     });
@@ -85,7 +85,7 @@ export class UserService {
   async remove(id: number, loggedInUser: User) {
     this.isLoggedInUser(loggedInUser, id);
     await this.findOneAndReturn(id);
-    return await this.db.user.delete({
+    return await this.db.users.delete({
       where: { id },
       select: {
         id: true,

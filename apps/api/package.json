@@ -27,6 +27,7 @@
   "dependencies": {
     "@libsql/client": "^0.17.4",
     "@nestjs/common": "^11.1.27",
+    "@repo/types": "*",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.27",
     "@nestjs/jwt": "^11.0.2",
