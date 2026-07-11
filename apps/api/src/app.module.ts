@@ -8,9 +8,10 @@ import { RolesGuard } from './auth/role.guard';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
+import { PostModule } from './post/post.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({isGlobal:true}), AuthModule, UserModule],
+  imports: [ConfigModule.forRoot({isGlobal:true}), AuthModule, UserModule, PostModule],
   controllers: [AppController],
   providers: [
     PrismaService,
