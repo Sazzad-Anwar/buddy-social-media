@@ -1,4 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
   NotFoundException,
@@ -10,17 +9,18 @@ import { PrismaService } from '../db.service';
 import { JwtService } from '@nestjs/jwt';
 import type { IResult } from 'ua-parser-js';
 import * as bcrypt from 'bcrypt';
+import { Role } from '../enums/role.enum';
 
 /**
- * Unit tests that focus **only** on the `login` method of `AuthService`.
+ * Unit tests for `AuthService`.
  * All external dependencies (Prisma, JWT, password validation) are mocked
  * so no real database or token generation occurs.
  */
+
 const mockPrisma = {
   $transaction: jest.fn(),
-  user: {
+  users: {
     findUnique: jest.fn(),
-    // `create` is used in the registration flow
     create: jest.fn(),
   },
   refreshToken: {
@@ -37,59 +37,48 @@ const mockJwt = {
 } as any;
 
 const loginDto = { email: 'john@gmail.com', password: 'password' };
-// The user object returned by Prisma. Include an `id` because the service
-// uses it when signing the JWT and when generating the refresh token.
 const createUserDto = {
   id: 1,
   firstName: 'John',
-  lastName: 'John',
+  lastName: 'Doe',
   email: 'john@gmail.com',
-  password: 'password', // plain for the test; we will mock bcrypt.compare
+  role: Role.USER,
+  password: 'password',
 };
-const userAgent = { browser: { name: 'Chrome' } } as IResult;
+const userAgent = {
+  browser: { name: 'Chrome' },
+} as IResult;
 const fakeRefresh = { id: 1, token: 'refresh_token' };
 
 describe('AuthService.login', () => {
   let authService: AuthService;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     jest.clearAllMocks();
     mockPrisma.$transaction.mockImplementation((cb: any) => cb(mockPrisma));
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: JwtService, useValue: mockJwt },
-      ],
-    }).compile();
-
-    authService = module.get<AuthService>(AuthService);
+    authService = new AuthService(
+      mockPrisma as PrismaService,
+      mockJwt as JwtService,
+    );
   });
 
   it('should return access and refresh tokens on success', async () => {
-    // Arrange: mock DB lookup, password check, JWT signing and refresh token creation
-    mockPrisma.user.findUnique.mockResolvedValue(createUserDto);
-    // Mock bcrypt.compare to always succeed for the test password.
+    mockPrisma.users.findUnique.mockResolvedValue(createUserDto);
     jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-    // Mock the internal hashRefreshToken to avoid dealing with $transaction.
     jest
       .spyOn(authService, 'hashRefreshToken')
       .mockResolvedValue('refresh_token');
     mockJwt.sign.mockReturnValue('access_token');
 
-    // Act
     const result = await authService.login(loginDto, userAgent);
 
-    // Assert: result shape and that collaborators were called correctly
     expect(result).toEqual({
       access_token: 'access_token',
       refresh_token: 'refresh_token',
     });
-    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+    expect(mockPrisma.users.findUnique).toHaveBeenCalledWith({
       where: { email: loginDto.email },
     });
-    // The service signs the JWT with only the `sub` claim.
     expect(mockJwt.sign).toHaveBeenCalledWith(
       { sub: createUserDto.id },
       { expiresIn: '15m' },
@@ -97,7 +86,7 @@ describe('AuthService.login', () => {
   });
 
   it('should throw NotFoundException when user does not exist', async () => {
-    mockPrisma.user.findUnique.mockResolvedValue(null); // user not found
+    mockPrisma.users.findUnique.mockResolvedValue(null);
 
     await expect(authService.login(loginDto, userAgent)).rejects.toThrow(
       NotFoundException,
@@ -105,7 +94,7 @@ describe('AuthService.login', () => {
   });
 
   it('Should throw BadRequestException when password does not match', async () => {
-    mockPrisma.user.findUnique.mockResolvedValue(createUserDto);
+    mockPrisma.users.findUnique.mockResolvedValue(createUserDto);
     jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
     await expect(authService.login(loginDto, userAgent)).rejects.toThrow(
@@ -114,54 +103,48 @@ describe('AuthService.login', () => {
   });
 });
 
-describe('AuthService.registration', () => {
+describe('AuthService.register', () => {
   let authService: AuthService;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     jest.clearAllMocks();
     mockPrisma.$transaction.mockImplementation((cb: any) => cb(mockPrisma));
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: JwtService, useValue: mockJwt },
-      ],
-    }).compile();
-
-    authService = module.get<AuthService>(AuthService);
+    authService = new AuthService(
+      mockPrisma as PrismaService,
+      mockJwt as JwtService,
+    );
   });
 
   it('should register a new user and return tokens', async () => {
-    // No existing user
-    mockPrisma.user.findUnique.mockResolvedValue(null);
-
-    // Mock user creation – the service expects the created user to have an id
+    mockPrisma.users.findUnique.mockResolvedValue(null);
     const createdUser = { ...createUserDto, id: 2 };
-    mockPrisma.user.create.mockResolvedValue(createdUser);
+    mockPrisma.users.create.mockResolvedValue(createdUser);
 
-    // Mock bcrypt helpers
     jest.spyOn(bcrypt, 'genSalt').mockResolvedValue('salt' as never);
     jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashedPassword' as never);
-
-    // Mock internal hashRefreshToken and JWT sign
     jest
       .spyOn(authService, 'hashRefreshToken')
       .mockResolvedValue('refresh_token');
     mockJwt.sign.mockReturnValue('access_token');
 
-    // Act
     const result = await authService.register(createUserDto, userAgent);
 
-    // Assert
     expect(result).toEqual({
       access_token: 'access_token',
       refresh_token: 'refresh_token',
     });
-    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+    expect(mockPrisma.users.findUnique).toHaveBeenCalledWith({
       where: { email: createUserDto.email },
     });
-    expect(mockPrisma.user.create).toHaveBeenCalled();
+    expect(mockPrisma.users.create).toHaveBeenCalledWith({
+      data: {
+        firstName: createUserDto.firstName,
+        lastName: createUserDto.lastName,
+        email: createUserDto.email,
+        role: Role.USER,
+        password: 'hashedPassword',
+      },
+    });
     expect(bcrypt.genSalt).toHaveBeenCalled();
     expect(bcrypt.hash).toHaveBeenCalledWith(createUserDto.password, 'salt');
     expect(mockJwt.sign).toHaveBeenCalledWith(
@@ -171,9 +154,7 @@ describe('AuthService.registration', () => {
   });
 
   it('should throw ConflictException when user already exists', async () => {
-    // Simulate existing user
-    mockPrisma.user.findUnique.mockResolvedValue(createUserDto);
-
+    mockPrisma.users.findUnique.mockResolvedValue(createUserDto);
     await expect(
       authService.register(createUserDto, userAgent),
     ).rejects.toThrow(ConflictException);
@@ -183,19 +164,13 @@ describe('AuthService.registration', () => {
 describe('AuthService.hashRefreshToken', () => {
   let authService: AuthService;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     jest.clearAllMocks();
     mockPrisma.$transaction.mockImplementation((cb: any) => cb(mockPrisma));
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: JwtService, useValue: mockJwt },
-      ],
-    }).compile();
-
-    authService = module.get<AuthService>(AuthService);
+    authService = new AuthService(
+      mockPrisma as PrismaService,
+      mockJwt as JwtService,
+    );
   });
 
   it('should create a new token when no existing token is found for the device', async () => {
@@ -257,19 +232,13 @@ describe('AuthService.hashRefreshToken', () => {
 describe('AuthService.regenerateTokens', () => {
   let authService: AuthService;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     jest.clearAllMocks();
     mockPrisma.$transaction.mockImplementation((cb: any) => cb(mockPrisma));
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: JwtService, useValue: mockJwt },
-      ],
-    }).compile();
-
-    authService = module.get<AuthService>(AuthService);
+    authService = new AuthService(
+      mockPrisma as PrismaService,
+      mockJwt as JwtService,
+    );
   });
 
   it('should regenerate tokens when a valid, non-expired, non-revoked token is provided', async () => {
@@ -281,6 +250,7 @@ describe('AuthService.regenerateTokens', () => {
       token: 'valid_token',
       isRevoked: false,
       expiresAt: futureDate,
+      user: { id: 1, email: 'john@gmail.com' },
     };
 
     mockPrisma.refreshToken.findUnique.mockResolvedValue(tokenRecord);
@@ -315,6 +285,7 @@ describe('AuthService.regenerateTokens', () => {
       token: 'revoked_token',
       isRevoked: true,
       expiresAt: new Date(Date.now() + 100000),
+      user: { id: 1, email: 'john@gmail.com' },
     };
 
     mockPrisma.refreshToken.findUnique.mockResolvedValue(tokenRecord);
@@ -335,6 +306,7 @@ describe('AuthService.regenerateTokens', () => {
       token: 'expired_token',
       isRevoked: false,
       expiresAt: pastDate,
+      user: { id: 1, email: 'john@gmail.com' },
     };
 
     mockPrisma.refreshToken.findUnique.mockResolvedValue(tokenRecord);
