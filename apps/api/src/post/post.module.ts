@@ -11,7 +11,6 @@ import { PostCacheService } from './post-cache.service';
   imports: [CacheModule, MediaModule, PostJobsModule],
   controllers: [PostController],
   providers: [PostService, PostCacheService, PrismaService],
-  exports: [PostService],
+  exports: [PostService, PostCacheService],
 })
 export class PostModule {}
-
