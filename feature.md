@@ -7,16 +7,16 @@
 
 # Feed Page
 
-- [ ] This is a protected route, accessible only to logged-in users.
-- [ ] All users can see posts from all other users.
-- [ ] Posts should be displayed with the most recent at the top.
-- [ ] You may ignore most of the design elements — focus only on the main functionality of the feed.
+- [x] This is a protected route, accessible only to logged-in users.
+- [x] All users can see posts from all other users.
+- [x] Posts should be displayed with the most recent at the top.
+- [x] You may ignore most of the design elements — focus only on the main functionality of the feed.
 
 # Required functionalities:
 
 - [ ] Ability to create posts with text and image.
-- [ ] Show posts with the newest first.
-- [ ] Display like/unlike state correctly.
+- [x] Show posts with the newest first.
+- [x] Display like/unlike state correctly.
 - [ ] Implement comments, replies, and their like/unlike system.
 - [ ] Show who has liked a post, comment, or reply.
 - [ ] Support private and public posts:

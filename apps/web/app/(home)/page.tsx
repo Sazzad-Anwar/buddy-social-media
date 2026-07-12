@@ -1,9 +1,16 @@
-import CreatePost from './components/create-post';
-import FeedArea from './components/feed-area';
-import LeftSidebar from './components/left-sidebar';
-import RightSidebar from './components/right-sidebar';
+import CreatePost from './components/post/create-post';
+import FeedArea from './components/home/feed-area';
+import LeftSidebar from './components/home/left-sidebar';
+import RightSidebar from './components/home/right-sidebar';
+import { Suspense } from 'react';
+import { FeedPage } from '@repo/types';
+import { api } from 'lib/server-api';
 
 export default async function Home() {
+  const initialFeed = await api<FeedPage>('/post?limit=20', {
+    cache: 'no-store',
+  });
+
   return (
     <div className="container _custom_container">
       <div className="_layout_inner_wrap">
@@ -13,7 +20,9 @@ export default async function Home() {
             <div className="_layout_middle_wrap">
               <div className="_layout_middle_inner">
                 <CreatePost />
-                <FeedArea />
+                <Suspense fallback={<>Loading</>}>
+                  <FeedArea initialFeed={initialFeed} />
+                </Suspense>
               </div>
             </div>
           </div>

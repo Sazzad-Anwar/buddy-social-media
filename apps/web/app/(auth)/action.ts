@@ -1,7 +1,7 @@
 'use server';
 
-import { LoginDto, CreateUserDto } from '@repo/types';
-import { api } from 'lib/api';
+import { LoginDto, CreateUserDto, User } from '@repo/types';
+import { api } from 'lib/server-api';
 import { cookies } from 'next/headers';
 import { redirect, RedirectType } from 'next/navigation';
 import setCookieParser from 'set-cookie-parser';
@@ -70,7 +70,7 @@ export const registerAction = async (registerData: CreateUserDto) => {
 
 export const loggedInUserDetails = async () => {
   try {
-    const data = await api(`/user/me`, {
+    const data = await api<User>(`/user/me`, {
       cache: 'no-store',
     });
     return data;

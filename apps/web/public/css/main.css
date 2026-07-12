@@ -1987,6 +1987,7 @@
 }
 ._comment_img {
   max-width: 26px;
+  border-radius: 50%;
 }
 ._feed_inner_comment_box_content {
   display: -webkit-box;
@@ -5919,6 +5920,8 @@
 /*---- Comment Reply css -----*/
 ._timline_comment_main {
   padding: 24px 24px 10px;
+  max-height: 300px;
+  overflow-y: auto;
 }
 ._comment_main {
   display: flex;
@@ -5947,6 +5950,7 @@
   padding: 12px;
   border-radius: 18px;
   width: 100%;
+  min-width: 100%;
   max-width: fit-content;
   position: relative;
   margin: 0 0 50px;

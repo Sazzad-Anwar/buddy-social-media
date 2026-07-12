@@ -166,3 +166,5 @@ export type UploadedImageMeta = z.infer<typeof uploadedImageMetaSchema>;
 export type TemporaryPostImage = z.infer<typeof temporaryPostImageSchema>;
 export type ProcessPostImageJob = z.infer<typeof processPostImageJobSchema>;
 export type ProcessedPostImage = z.infer<typeof processedPostImageSchema>;
+export const feedPageSchema = cursorPageSchema(postCardSchema);
+export type FeedPage = z.infer<typeof feedPageSchema>;

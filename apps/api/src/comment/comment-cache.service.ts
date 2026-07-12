@@ -36,7 +36,13 @@ export class CommentCacheService {
   }
 
   async getCommentsPage(key: string): Promise<string[] | null> {
-    return await this.cache.getJSON<string[]>(key);
+    const value = await this.cache.getJSON<unknown>(key);
+
+    if (!Array.isArray(value)) {
+      return null;
+    }
+
+    return value.every((item) => typeof item === 'string') ? value : null;
   }
 
   async setCommentsPage(
@@ -82,4 +88,3 @@ export class CommentCacheService {
     );
   }
 }
-
