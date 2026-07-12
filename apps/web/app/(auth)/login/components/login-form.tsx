@@ -5,8 +5,12 @@ import { LoginDto, loginSchema } from '@repo/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { cn } from 'lib/utils';
 import { loginAction } from 'app/(auth)/action';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginForm() {
+  const [error, setError] = useState('');
+  const router = useRouter();
   const form = useForm<LoginDto>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -16,7 +20,13 @@ export default function LoginForm() {
   });
 
   const onSubmit = async (loginData: LoginDto) => {
-    await loginAction(loginData);
+    try {
+      await loginAction(loginData);
+      router.push('/');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Login failed';
+      setError(message);
+    }
   };
 
   return (
@@ -126,6 +136,19 @@ export default function LoginForm() {
             >
               {form.formState.isSubmitting ? 'Logging...' : 'Login now'}
             </button>
+            {error !== '' ? (
+              <p
+                className="_label_error mt-2 text-center py-3"
+                style={{
+                  fontSize: 12,
+                  backgroundColor: 'var(--error-color-light)',
+                  borderRadius: 8,
+                  width: '99%',
+                }}
+              >
+                {error}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

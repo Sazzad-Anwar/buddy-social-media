@@ -2,7 +2,6 @@
 
 import { LoginDto, CreateUserDto } from '@repo/types';
 import { api } from 'lib/api';
-import { revlidateTags } from 'lib/constants';
 import { cookies } from 'next/headers';
 import { redirect, RedirectType } from 'next/navigation';
 import setCookieParser from 'set-cookie-parser';
@@ -46,9 +45,6 @@ export const loginAction = async (loginData: LoginDto) => {
     console.error('LoginAction caught error:', error);
     throw error;
   }
-
-  // Only reached when the request succeeded → perform the redirect
-  redirect('/', RedirectType.push);
 };
 
 export const registerAction = async (registerData: CreateUserDto) => {
@@ -70,38 +66,17 @@ export const registerAction = async (registerData: CreateUserDto) => {
     console.error('RegisterAction caught error:', error);
     throw error;
   }
-
-  // Only reached when the request succeeded → perform the redirect
-  redirect('/', RedirectType.push);
 };
 
 export const loggedInUserDetails = async () => {
-  const data = await api(`/user/me`, {
-    cache: 'force-cache',
-    next: {
-      tags: [revlidateTags.MY_PROFILE],
-      revalidate: 120,
-    },
-  });
-  return data;
-};
-
-export const revalidateTokens = async () => {
-  const cookieStore = await cookies();
-  const refresh = await fetch(`${url}/auth/refresh`, {
-    method: 'POST',
-    headers: {
-      Cookie: cookieStore.toString(),
-    },
-    credentials: 'include',
-  });
-
-  if (!refresh.ok) {
+  try {
+    const data = await api(`/user/me`, {
+      cache: 'no-store',
+    });
+    return data;
+  } catch (error) {
     redirect('/login');
   }
-
-  setCookies(refresh.headers.getSetCookie());
-  return await refresh.json();
 };
 
 export const logout = async () => {

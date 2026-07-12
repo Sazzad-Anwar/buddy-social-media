@@ -6,6 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { cn } from 'lib/utils';
 import { registerAction } from 'app/(auth)/action';
 import { z } from 'zod';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 const registrationSchema = createUserSchema
   .extend({
@@ -19,6 +21,8 @@ const registrationSchema = createUserSchema
 type RegistrationFormValues = z.infer<typeof registrationSchema>;
 
 export default function RegistrationForm() {
+  const [error, setError] = useState('');
+  const router = useRouter();
   const form = useForm<RegistrationFormValues>({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
@@ -31,12 +35,19 @@ export default function RegistrationForm() {
   });
 
   const onSubmit = async (data: RegistrationFormValues) => {
-    await registerAction({
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      password: data.password,
-    });
+    try {
+      await registerAction({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+      });
+      router.push('/');
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Registration Failed';
+      setError(message);
+    }
   };
 
   return (
@@ -243,6 +254,20 @@ export default function RegistrationForm() {
             >
               {form.formState.isSubmitting ? 'Registering...' : 'Register now'}
             </button>
+
+            {error !== '' ? (
+              <p
+                className="_label_error mt-2 text-center py-3"
+                style={{
+                  fontSize: 12,
+                  backgroundColor: 'var(--error-color-light)',
+                  borderRadius: 8,
+                  width: '99%',
+                }}
+              >
+                {error}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
