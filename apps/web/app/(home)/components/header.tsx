@@ -3,11 +3,13 @@ import Link from 'next/link';
 import NotificationPanel from './notification-panel';
 import ProfilePanel from './profile-panel';
 import { User } from '@repo/types';
-import { loggedInUserDetails } from 'app/(auth)/action';
 import { Suspense } from 'react';
 
-export default async function Header() {
-  const user = (await loggedInUserDetails()) as User;
+type Props = {
+  user: User;
+};
+
+export default function Header({ user }: Props) {
   return (
     <>
       {/*<!--Desktop Menu Start-->*/}
@@ -191,8 +193,8 @@ export default async function Header() {
               }
             >
               <ProfilePanel
-                firstName={user?.firstName}
-                lastName={user?.lastName}
+                firstName={user.firstName}
+                lastName={user.lastName}
               />
             </Suspense>
           </div>
