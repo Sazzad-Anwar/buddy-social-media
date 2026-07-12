@@ -6,11 +6,17 @@ import { CacheModule } from '../cache/cache.module';
 import { MediaModule } from '../media/media.module';
 import { PostJobsModule } from '../jobs/post-jobs.module';
 import { PostCacheService } from './post-cache.service';
+import { PostImageProcessor } from './processors/post-image.processor';
 
 @Module({
   imports: [CacheModule, MediaModule, PostJobsModule],
   controllers: [PostController],
-  providers: [PostService, PostCacheService, PrismaService],
+  providers: [
+    PostService,
+    PostCacheService,
+    PrismaService,
+    PostImageProcessor,
+  ],
   exports: [PostService, PostCacheService],
 })
 export class PostModule {}

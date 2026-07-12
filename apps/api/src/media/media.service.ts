@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import { randomUUID } from 'crypto';
 import { join, dirname } from 'path';
@@ -21,6 +21,7 @@ export interface UploadedImageLikeFile {
 export class MediaService {
   private readonly rootDir = join(process.cwd(), 'uploads');
   private readonly utapi = new UTApi();
+  private readonly logger = new Logger(MediaService.name);
 
   private async ensureDir(filePath: string): Promise<void> {
     await fs.mkdir(dirname(filePath), { recursive: true });
@@ -54,6 +55,7 @@ export class MediaService {
   async processToWebp(
     tempPath: string,
     originalName: string,
+    postId: number,
   ): Promise<ProcessedPostImage> {
     const buffer = await sharp(tempPath)
       .rotate()
@@ -67,11 +69,22 @@ export class MediaService {
       .toBuffer();
 
     const outputName = `${originalName.replace(/\.[^.]+$/, '')}.webp`;
+    const outputPath = join(
+      this.rootDir,
+      'tmp',
+      'posts',
+      String(postId),
+      `processed-${randomUUID()}-${outputName}`,
+    );
+
+    await this.ensureDir(outputPath);
+    await fs.writeFile(outputPath, buffer);
 
     return {
       buffer,
       name: outputName,
       mimetype: 'image/webp',
+      tempPath: outputPath,
     };
   }
 
@@ -86,15 +99,24 @@ export class MediaService {
 
     const result = await this.utapi.uploadFiles(file);
 
-    if (!('data' in result) || !result.data) {
+    if (!result.data) {
+      this.logger.error(
+        `UploadThing upload failed for post ${postId}`,
+        JSON.stringify(result.error),
+      );
       throw new Error('UploadThing upload failed');
     }
 
+    const uploaded = result.data;
+    this.logger.log(
+      `Uploaded post image ${postId} to UploadThing with key ${uploaded.key}`,
+    );
+
     return {
-      key: result.data.key,
-      url: result.data.ufsUrl,
-      name: result.data.name,
-      size: result.data.size,
+      key: uploaded.key,
+      ufsUrl: uploaded.ufsUrl,
+      name: uploaded.name,
+      size: uploaded.size,
     };
   }
 

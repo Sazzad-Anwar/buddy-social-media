@@ -59,12 +59,21 @@ export class PostController {
   }
 
   @Patch(':id')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: {
+        fileSize: MAX_POST_IMAGE_SIZE_BYTES,
+      },
+    }),
+  )
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePostDto: UpdatePostDto,
     @Req() req: AuthRequest,
+    @UploadedFile() file?: UploadedImageLikeFile,
   ) {
-    return this.postService.update(id, updatePostDto, req.user);
+    return this.postService.update(id, updatePostDto, req.user, file);
   }
 
   @Delete(':id')

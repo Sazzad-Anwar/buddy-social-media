@@ -7,7 +7,10 @@ import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../db.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { MediaService, type UploadedImageLikeFile } from '../media/media.service';
+import {
+  MediaService,
+  type UploadedImageLikeFile,
+} from '../media/media.service';
 import { PostJobsService } from '../jobs/post-jobs.service';
 import { PostCacheService } from './post-cache.service';
 import {
@@ -20,11 +23,7 @@ import {
   POST_LIKES_CACHE_TTL_SECONDS,
   POST_SUMMARY_CACHE_TTL_SECONDS,
 } from './post.constants';
-import type {
-  PostCard,
-  PostLikePreviewUser,
-  PostLikeUser,
-} from './post.types';
+import type { PostCard, PostLikePreviewUser, PostLikeUser } from './post.types';
 import type { User } from '@repo/types';
 
 type FeedCursor = {
@@ -60,10 +59,7 @@ const postSummarySelect = {
   },
   likes: {
     take: 5,
-    orderBy: [
-      { createdAt: 'desc' },
-      { userId: 'desc' },
-    ],
+    orderBy: [{ createdAt: 'desc' }, { userId: 'desc' }],
     select: {
       user: {
         select: {
@@ -172,7 +168,7 @@ export class PostService {
       select: postSummarySelect,
     });
 
-    if (tempImage) {
+    if (tempImage?.tempPath) {
       try {
         await this.jobs.enqueuePostImageProcessing(tempImage);
       } catch {
@@ -221,8 +217,7 @@ export class PostService {
       const nextCursor =
         cardsWithLikes.length > 0
           ? encodeCursor<FeedCursor>({
-              createdAt:
-                cardsWithLikes[cardsWithLikes.length - 1].createdAt,
+              createdAt: cardsWithLikes[cardsWithLikes.length - 1].createdAt,
               id: cardsWithLikes[cardsWithLikes.length - 1].id,
             })
           : null;
@@ -239,10 +234,7 @@ export class PostService {
 
     const posts = await this.db.post.findMany({
       where,
-      orderBy: [
-        { createdAt: 'desc' },
-        { id: 'desc' },
-      ],
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
       select: postSummarySelect,
     });
@@ -281,10 +273,7 @@ export class PostService {
     const post = await this.db.post.findFirst({
       where: {
         id,
-        OR: [
-          { visibility: 'PUBLIC' },
-          { authorId: viewer.id },
-        ],
+        OR: [{ visibility: 'PUBLIC' }, { authorId: viewer.id }],
       },
       select: postSummarySelect,
     });
@@ -312,22 +301,74 @@ export class PostService {
     id: number,
     updatePostDto: UpdatePostDto,
     viewer: User,
+    file?: UploadedImageLikeFile,
   ): Promise<PostCard> {
     const post = await this.ensureOwnedPost(id, viewer.id);
+    const tempImage =
+      file !== undefined
+        ? await this.media.saveTemporaryUpload(file, post.id)
+        : null;
+
+    const nextData = {
+      content: updatePostDto.content ?? post.content,
+      visibility: updatePostDto.visibility ?? post.visibility,
+      ...(tempImage
+        ? {
+            imageKey: null,
+            imageUrl: null,
+            imageStatus: 'PENDING' as const,
+          }
+        : {}),
+    };
 
     const updated = await this.db.post.update({
       where: { id },
-      data: {
-        content: updatePostDto.content ?? post.content,
-        visibility: updatePostDto.visibility ?? post.visibility,
-      },
+      data: nextData,
       select: postSummarySelect,
     });
+
+    if (tempImage?.tempPath) {
+      try {
+        await this.jobs.enqueuePostImageProcessing({
+          ...tempImage,
+          previousImageKey: post.imageKey,
+        });
+      } catch {
+        const reverted = await this.db.post.update({
+          where: { id },
+          data: {
+            imageKey: post.imageKey,
+            imageUrl: post.imageUrl,
+            imageStatus: post.imageKey ? post.imageStatus : 'FAILED',
+          },
+          select: postSummarySelect,
+        });
+        await this.media.removeFile(tempImage.tempPath);
+        await this.cache.bumpFeedVersion();
+        await this.cache.deletePostCards(id, viewer.id);
+
+        return serializePostCard({
+          ...reverted,
+          imageKey: post.imageKey,
+          imageUrl: post.imageUrl,
+          imageStatus: post.imageKey ? post.imageStatus : 'FAILED',
+        });
+      }
+    }
 
     await this.cache.bumpFeedVersion();
     await this.cache.deletePostCards(id, viewer.id);
 
-    return serializePostCard(updated);
+    return serializePostCard(
+      tempImage
+        ? {
+            ...updated,
+            imageKey: null,
+            imageUrl: null,
+            imageStatus: 'PENDING',
+          }
+        : updated,
+    );
   }
 
   async remove(id: number, viewer: User): Promise<{ id: number }> {
@@ -369,10 +410,7 @@ export class PostService {
     const post = await this.db.post.findFirst({
       where: {
         id,
-        OR: [
-          { visibility: 'PUBLIC' },
-          { authorId: viewer.id },
-        ],
+        OR: [{ visibility: 'PUBLIC' }, { authorId: viewer.id }],
       },
       select: {
         id: true,
@@ -483,12 +521,13 @@ export class PostService {
     if (cached) {
       return {
         items: cached,
-        nextCursor: cached.length > 0
-          ? encodeCursor<LikesCursor>({
-              createdAt: cached[cached.length - 1].likedAt,
-              userId: cached[cached.length - 1].id,
-            })
-          : null,
+        nextCursor:
+          cached.length > 0
+            ? encodeCursor<LikesCursor>({
+                createdAt: cached[cached.length - 1].likedAt,
+                userId: cached[cached.length - 1].id,
+              })
+            : null,
         hasNextPage: cached.length === limit,
       };
     }
@@ -517,10 +556,7 @@ export class PostService {
 
     const likes = await this.db.postLike.findMany({
       where,
-      orderBy: [
-        { createdAt: 'desc' },
-        { userId: 'desc' },
-      ],
+      orderBy: [{ createdAt: 'desc' }, { userId: 'desc' }],
       take: limit + 1,
       select: postLikeSelect,
     });
@@ -568,10 +604,7 @@ export class PostService {
     const post = await this.db.post.findFirst({
       where: {
         id,
-        OR: [
-          { visibility: 'PUBLIC' },
-          { authorId: userId },
-        ],
+        OR: [{ visibility: 'PUBLIC' }, { authorId: userId }],
       },
       select: {
         id: true,
@@ -589,10 +622,7 @@ export class PostService {
 
   private buildFeedWhere(userId: number, cursor: FeedCursor | null) {
     const visibilityFilter = {
-      OR: [
-        { visibility: 'PUBLIC' as const },
-        { authorId: userId },
-      ],
+      OR: [{ visibility: 'PUBLIC' as const }, { authorId: userId }],
     };
 
     if (!cursor) {
@@ -731,10 +761,7 @@ export class PostService {
     const post = await this.db.post.findFirst({
       where: {
         id: postId,
-        OR: [
-          { visibility: 'PUBLIC' },
-          { authorId: viewerId },
-        ],
+        OR: [{ visibility: 'PUBLIC' }, { authorId: viewerId }],
       },
       select: postSummarySelect,
     });

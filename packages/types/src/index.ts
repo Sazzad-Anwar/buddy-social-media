@@ -107,7 +107,7 @@ export const commentCardSchema = z.object({
 
 export const uploadedImageMetaSchema = z.object({
   key: z.string(),
-  url: z.string().url(),
+  ufsUrl: z.string().url(),
   name: z.string(),
   size: z.number().int().nonnegative(),
 });
@@ -120,12 +120,15 @@ export const temporaryPostImageSchema = z.object({
   mimetype: z.string().min(1),
 });
 
-export const processPostImageJobSchema = temporaryPostImageSchema;
+export const processPostImageJobSchema = temporaryPostImageSchema.extend({
+  previousImageKey: z.string().min(1).nullable().optional(),
+});
 
 export const processedPostImageSchema = z.object({
   buffer: z.instanceof(Uint8Array),
   name: z.string().min(1),
   mimetype: z.literal('image/webp'),
+  tempPath: z.string().min(1),
 });
 
 export const cursorPageSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
