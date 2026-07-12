@@ -85,6 +85,7 @@ export default function RegistrationPage() {
                     src="/images/logo.svg"
                     alt="_right_logo"
                     className="_right_logo"
+                    loading="lazy"
                   />
                 </div>
                 <p className="_social_registration_content_para _mar_b8">

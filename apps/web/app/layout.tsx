@@ -32,7 +32,6 @@ export default function RootLayout({
         {children}
       </body>
       <Script src="/js/bootstrap.bundle.min.js" />
-      <Script src="/js/custom.js" />
     </html>
   );
 }

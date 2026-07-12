@@ -74,7 +74,8 @@ export const loggedInUserDetails = async () => {
       cache: 'no-store',
     });
     return data;
-  } catch (error) {
+  } catch (error: unknown) {
+    console.log(error);
     redirect('/login');
   }
 };

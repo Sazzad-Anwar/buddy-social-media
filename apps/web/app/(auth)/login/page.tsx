@@ -78,6 +78,7 @@ export default function LoginPage() {
                     src="/images/logo.svg"
                     alt="_left_logo"
                     className="_left_logo"
+                    loading="lazy"
                   />
                 </div>
                 <p className="_social_login_content_para _mar_b8">

@@ -3,7 +3,7 @@
 - [x] Implement a secure authentication system (session-based or JWT-based) with proper authorization.
 - [x] Registration should include: first name, last name, email, and password.
 - [x] No need to build features like “forgot password” or others to keep it simple.
-- [ ] Users should be able to sign up and log in to access the feed page.
+- [x] Users should be able to sign up and log in to access the feed page.
 
 # Feed Page
 

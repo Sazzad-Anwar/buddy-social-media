@@ -132,6 +132,7 @@ ul {
     --bcolor2: #E8E8E8;
     --bcolor2: #F5F5F5;
     --error-color: #ee4b2b;
+    --error-color-light:#ee4b2b15;
 }
 
 ._layout {
@@ -241,12 +242,13 @@ ul {
 /*Button*/
 
 ._btn1 {
-    padding: 12px 116px;
+    padding: 12px 107px;
     background: var(--color5);
     border: 1px solid transparent;
     border-radius: 6px;
     font-weight: 500;
     font-size: 16px;
+    width: 100%;
     color: #fff;
 }
 

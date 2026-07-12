@@ -302,10 +302,10 @@
   height: 48px;
 }
 ._label_error {
-  color: var(--error-color);
+  color: var(--error-color) !important;
 }
 ._input_error {
-  border: 1px solid var(--error-color);
+  border: 1px solid var(--error-color) !important;
 }
 ._social_login_input::-webkit-input-placeholder {
   font-weight: normal;
