@@ -92,7 +92,7 @@ export class MediaService {
 
     return {
       key: result.data.key,
-      url: result.data.url,
+      url: result.data.ufsUrl,
       name: result.data.name,
       size: result.data.size,
     };
