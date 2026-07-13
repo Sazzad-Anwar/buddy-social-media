@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -39,5 +40,22 @@ export class CommentController {
   ) {
     return this.commentService.findAll(postId, req.user, query);
   }
-}
 
+  @Post(':commentId/like')
+  like(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.commentService.like(postId, commentId, req.user);
+  }
+
+  @Delete(':commentId/like')
+  unlike(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.commentService.unlike(postId, commentId, req.user);
+  }
+}

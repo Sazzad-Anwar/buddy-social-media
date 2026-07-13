@@ -101,15 +101,21 @@ model Reply {
   id         Int         @id @default(autoincrement())
   commentId  Int
   comment    Comment     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  parentReplyId Int?
+  parentReply Reply?     @relation("ReplyThread", fields: [parentReplyId], references: [id], onDelete: Cascade)
+  replies    Reply[]     @relation("ReplyThread")
   authorId   Int
   author     Users       @relation(fields: [authorId], references: [id], onDelete: Cascade)
   content    String      @db.Text
+  repliesCount Int       @default(0)
   likesCount Int         @default(0)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   likes      ReplyLike[]
 
   @@index([commentId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([commentId, parentReplyId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([parentReplyId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([authorId, createdAt(sort: Desc), id(sort: Desc)])
   @@map("replies")
 }

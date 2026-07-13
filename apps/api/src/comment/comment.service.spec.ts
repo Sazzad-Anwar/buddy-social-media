@@ -83,9 +83,13 @@ function createServiceFixture() {
     postFindFirst: [] as unknown[][],
     postUpdate: [] as unknown[][],
     commentCreate: [] as unknown[][],
+    commentUpdate: [] as unknown[][],
     commentFindMany: [] as unknown[][],
     commentFindFirst: [] as unknown[][],
     commentLikeFindMany: [] as unknown[][],
+    commentLikeFindUnique: [] as unknown[][],
+    commentLikeCreate: [] as unknown[][],
+    commentLikeDelete: [] as unknown[][],
     bumpCommentsVersion: [] as unknown[][],
     bumpFeedVersion: [] as unknown[][],
     deletePostCards: [] as unknown[][],
@@ -93,15 +97,21 @@ function createServiceFixture() {
   };
 
   let visiblePostResult: typeof visiblePost | null = visiblePost;
+  let visibleCommentResult: typeof commentSummary | null = commentSummary;
   let commentsFindManyResult = [commentSummary, secondCommentSummary];
   let cachedCommentIds: string[] | null = null;
   let cachedCommentCard = null as null | typeof expectedCommentCard;
   let likedCommentIds: number[] = [];
+  let commentLikeExists = false;
 
   const tx = {
     comment: {
       create: async (args: unknown) => {
         calls.commentCreate.push([args]);
+        return commentSummary;
+      },
+      update: async (args: unknown) => {
+        calls.commentUpdate.push([args]);
         return commentSummary;
       },
     },
@@ -128,7 +138,7 @@ function createServiceFixture() {
       },
       findFirst: async (args: unknown) => {
         calls.commentFindFirst.push([args]);
-        if (cachedCommentCard) {
+        if (visibleCommentResult) {
           return commentSummary;
         }
         return null;
@@ -138,6 +148,20 @@ function createServiceFixture() {
       findMany: async (args: unknown) => {
         calls.commentLikeFindMany.push([args]);
         return likedCommentIds.map((commentId) => ({ commentId }));
+      },
+      findUnique: async (args: unknown) => {
+        calls.commentLikeFindUnique.push([args]);
+        return commentLikeExists ? ({ commentId: 101, userId: viewer.id } as any) : null;
+      },
+      create: async (args: unknown) => {
+        calls.commentLikeCreate.push([args]);
+        commentLikeExists = true;
+        return null;
+      },
+      delete: async (args: unknown) => {
+        calls.commentLikeDelete.push([args]);
+        commentLikeExists = false;
+        return null;
       },
     },
   };
@@ -193,6 +217,9 @@ function createServiceFixture() {
     setCommentsFindManyResult: (value: unknown[]) => {
       commentsFindManyResult = value as any;
     },
+    setVisibleCommentResult: (value: typeof commentSummary | null) => {
+      visibleCommentResult = value;
+    },
     setCachedCommentIds: (value: string[] | null) => {
       cachedCommentIds = value;
     },
@@ -201,6 +228,9 @@ function createServiceFixture() {
     },
     setLikedCommentIds: (value: number[]) => {
       likedCommentIds = value;
+    },
+    setCommentLikeExists: (value: boolean) => {
+      commentLikeExists = value;
     },
   };
 }
@@ -290,5 +320,23 @@ describe('CommentService', () => {
     await expect(
       fixture.service.findAll(visiblePost.id, viewer, {}),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('likes and unlikes a comment while keeping counts consistent', async () => {
+    fixture.setCommentLikeExists(false);
+
+    const liked = await fixture.service.like(visiblePost.id, 101, viewer);
+    expect(liked).toEqual({ likedByMe: true, likesCount: 1 });
+
+    fixture.setCommentLikeExists(true);
+
+    const unliked = await fixture.service.unlike(visiblePost.id, 101, viewer);
+    expect(unliked).toEqual({ likedByMe: false, likesCount: 1 });
+
+    expect(fixture.calls.commentLikeFindUnique.length).toBe(2);
+    expect(fixture.calls.commentLikeCreate.length).toBe(1);
+    expect(fixture.calls.commentLikeDelete.length).toBe(1);
+    expect(fixture.calls.commentUpdate.length).toBe(2);
+    expect(fixture.calls.deletePostCards.length).toBe(2);
   });
 });

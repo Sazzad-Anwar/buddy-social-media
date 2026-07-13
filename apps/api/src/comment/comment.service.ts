@@ -221,6 +221,22 @@ export class CommentService {
     };
   }
 
+  async like(
+    postId: number,
+    commentId: number,
+    viewer: User,
+  ): Promise<{ likedByMe: boolean; likesCount: number }> {
+    return await this.setLikeState(postId, commentId, viewer, true);
+  }
+
+  async unlike(
+    postId: number,
+    commentId: number,
+    viewer: User,
+  ): Promise<{ likedByMe: boolean; likesCount: number }> {
+    return await this.setLikeState(postId, commentId, viewer, false);
+  }
+
   private async resolveCardsFromIds(ids: string[], viewerId: number) {
     const cards: CommentCard[] = [];
 
@@ -349,6 +365,144 @@ export class CommentService {
     }
 
     return `comment:summary:${params.commentId}:public`;
+  }
+
+  private async ensureVisibleComment(
+    postId: number,
+    commentId: number,
+    userId: number,
+  ) {
+    const comment = await this.db.comment.findFirst({
+      where: {
+        id: commentId,
+        postId,
+        post: {
+          OR: [{ visibility: 'PUBLIC' }, { authorId: userId }],
+        },
+      },
+      select: {
+        id: true,
+        postId: true,
+        authorId: true,
+        post: {
+          select: {
+            id: true,
+            authorId: true,
+            visibility: true,
+          },
+        },
+      },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comment is not found');
+    }
+
+    return comment;
+  }
+
+  private async setLikeState(
+    postId: number,
+    commentId: number,
+    viewer: User,
+    shouldLike: boolean,
+  ): Promise<{ likedByMe: boolean; likesCount: number }> {
+    const comment = await this.ensureVisibleComment(
+      postId,
+      commentId,
+      viewer.id,
+    );
+
+    const existing = await this.db.commentLike.findUnique({
+      where: {
+        commentId_userId: {
+          commentId,
+          userId: viewer.id,
+        },
+      },
+    });
+
+    const summary = await this.db.comment.findFirst({
+      where: {
+        id: commentId,
+        postId,
+      },
+      select: {
+        id: true,
+        likesCount: true,
+      },
+    });
+
+    if (!summary) {
+      throw new NotFoundException('Comment is not found');
+    }
+
+    if (shouldLike && existing) {
+      return {
+        likedByMe: true,
+        likesCount: summary.likesCount,
+      };
+    }
+
+    if (!shouldLike && !existing) {
+      return {
+        likedByMe: false,
+        likesCount: summary.likesCount,
+      };
+    }
+
+    const updated = await this.db.$transaction(async (tx) => {
+      if (!shouldLike) {
+        await tx.commentLike.delete({
+          where: {
+            commentId_userId: {
+              commentId,
+              userId: viewer.id,
+            },
+          },
+        });
+
+        return await tx.comment.update({
+          where: { id: commentId },
+          data: {
+            likesCount: {
+              decrement: 1,
+            },
+          },
+          select: {
+            id: true,
+            likesCount: true,
+          },
+        });
+      }
+
+      await tx.commentLike.create({
+        data: {
+          commentId,
+          userId: viewer.id,
+        },
+      });
+
+      return await tx.comment.update({
+        where: { id: commentId },
+        data: {
+          likesCount: {
+            increment: 1,
+          },
+        },
+        select: {
+          id: true,
+          likesCount: true,
+        },
+      });
+    });
+
+    await this.cache.deleteCommentCards(commentId, comment.post.authorId);
+
+    return {
+      likedByMe: shouldLike,
+      likesCount: updated.likesCount,
+    };
   }
 
   private async ensureVisiblePost(postId: number, userId: number) {

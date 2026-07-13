@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { PostModule } from './post/post.module';
 import { CommentModule } from './comment/comment.module';
+import { ReplyModule } from './reply/reply.module';
 import Redis from 'ioredis';
 
 function createBullmqConnection(): Redis {
@@ -39,6 +40,7 @@ function createBullmqConnection(): Redis {
     UserModule,
     PostModule,
     CommentModule,
+    ReplyModule,
   ],
   controllers: [AppController],
   providers: [
