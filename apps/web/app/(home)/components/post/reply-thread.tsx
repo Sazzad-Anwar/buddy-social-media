@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  addReplyAction,
   loadRepliesAction,
   likeReplyAction,
   unlikeReplyAction,
@@ -23,12 +24,9 @@ type Props = {
   replyCount: number;
   isReplying: boolean;
   replyContent: string;
-  isSubmittingReply: boolean;
   onReplyContentChange: (value: string) => void;
   onToggleReplying: () => void;
-  onSubmitReply: () => Promise<void>;
-  replyRefreshKey: number;
-  optimisticReply: ReplyCard | null;
+  onReplySubmitted: () => void;
   replyFocusKey: number;
 };
 
@@ -48,17 +46,13 @@ export function ReplyThread({
   replyCount,
   isReplying,
   replyContent,
-  isSubmittingReply,
   onReplyContentChange,
   onToggleReplying,
-  onSubmitReply,
-  replyRefreshKey,
-  optimisticReply,
+  onReplySubmitted,
   replyFocusKey,
 }: Props) {
   const replyLimit = 5;
   const user = useCurrentUserStore((state) => state.user);
-  const [optimisticReplies, setOptimisticReplies] = useState<ReplyCard[]>([]);
 
   const {
     data: replyPages,
@@ -108,55 +102,125 @@ export function ReplyThread({
     [replyPages],
   );
 
-  useEffect(() => {
-    if (!optimisticReply) {
-      return;
-    }
-
-    setOptimisticReplies((current) => {
-      if (current.some((reply) => reply.id === optimisticReply.id)) {
-        return current;
-      }
-
-      return [optimisticReply, ...current];
-    });
-  }, [optimisticReply]);
-
-  useEffect(() => {
-    setOptimisticReplies((current) =>
-      current.filter(
-        (optimisticReplyItem) =>
-          !replies.some((reply) => reply.id === optimisticReplyItem.id),
-      ),
-    );
-  }, [replies]);
-
-  const displayedReplies = useMemo(() => {
-    const seen = new Set<number>();
-
-    return [...optimisticReplies, ...replies].filter((reply) => {
-      if (seen.has(reply.id)) {
-        return false;
-      }
-
-      seen.add(reply.id);
-      return true;
-    });
-  }, [optimisticReplies, replies]);
-
   const replyLastPage = replyPages?.[replyPages.length - 1];
   const hasNextReplyPage = replyLastPage?.hasNextPage ?? false;
   const loadingMoreReplies = isReplyValidating && replySize > 1;
 
-  useEffect(() => {
-    if (replyRefreshKey === 0) {
+  const submitReply = async () => {
+    const trimmedReply = replyContent.trim();
+    if (!trimmedReply) {
       return;
     }
 
-    void mutateReplies(undefined, {
-      revalidate: true,
-    });
-  }, [mutateReplies, replyRefreshKey]);
+    const optimisticId = -Date.now();
+
+    const optimisticReply: ReplyCard = {
+      id: optimisticId,
+      commentId,
+      parentReplyId: null,
+      content: trimmedReply,
+      repliesCount: 0,
+      likesCount: 0,
+      likedByMe: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      author: user
+        ? {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
+          }
+        : {
+            id: 0,
+            firstName: 'Unknown',
+            lastName: '',
+            email: '',
+            role: 'USER',
+          },
+      likedUsers: [],
+    };
+
+    // Step 1: Inject optimistic into SWR cache
+    await mutateReplies(
+      (currentPages): ReplyPage[] | undefined => {
+        if (!currentPages || currentPages.length === 0) {
+          return [
+            {
+              items: [optimisticReply],
+              nextCursor: null,
+              hasNextPage: false,
+            },
+          ];
+        }
+
+        const [firstPage, ...restPages] = currentPages;
+
+        if (!firstPage) {
+          return [
+            {
+              items: [optimisticReply],
+              nextCursor: null,
+              hasNextPage: false,
+            },
+          ];
+        }
+
+        return [
+          {
+            items: [optimisticReply, ...firstPage.items],
+            nextCursor: firstPage.nextCursor,
+            hasNextPage: firstPage.hasNextPage,
+          },
+          ...restPages,
+        ];
+      },
+      { revalidate: false },
+    );
+
+    onReplySubmitted();
+
+    try {
+      const createdReply = await addReplyAction(
+        postId,
+        commentId,
+        trimmedReply,
+      );
+
+      // Step 2: Replace optimistic with real reply
+      await mutateReplies(
+        (currentPages) => {
+          if (!currentPages) return currentPages;
+
+          return currentPages.map((page) => ({
+            ...page,
+            items: page.items.map((item) =>
+              item.id === optimisticId ? createdReply : item,
+            ),
+          }));
+        },
+        { revalidate: false },
+      );
+    } catch (error) {
+      console.log(error);
+
+      // Step 3: Remove optimistic on error
+      await mutateReplies(
+        (currentPages) => {
+          if (!currentPages) return currentPages;
+
+          return currentPages.map((page) => ({
+            ...page,
+            items: page.items.filter((item) => item.id !== optimisticId),
+          }));
+        },
+        { revalidate: false },
+      );
+
+      throw error;
+    }
+  };
 
   return (
     <>
@@ -167,23 +231,21 @@ export function ReplyThread({
 
       {isReplying ? (
         <ReplyComposer
-          commentId={commentId}
           commentAuthorName={commentAuthorName}
           replyContent={replyContent}
-          isSubmittingReply={isSubmittingReply}
           userFirstName={user?.firstName ?? ''}
           userLastName={user?.lastName ?? ''}
           onReplyContentChange={onReplyContentChange}
-          onSubmitReply={onSubmitReply}
+          onSubmitReply={submitReply}
           replyFocusKey={replyFocusKey}
         />
       ) : null}
 
       {isReplyLoading && replies.length === 0 ? <ReplyLoading /> : null}
 
-      {displayedReplies.length > 0 ? (
+      {replies.length > 0 ? (
         <div className="space-y-4 border-l border-slate-200 pl-4">
-          {displayedReplies.map((reply) => (
+          {replies.map((reply) => (
             <ReplyItem
               key={`reply-${reply.id}`}
               postId={postId}
@@ -249,10 +311,8 @@ function ReplyHeader({ replyCount, onToggleReplying }: ReplyHeaderProps) {
 }
 
 type ReplyComposerProps = {
-  commentId: number;
   commentAuthorName: string;
   replyContent: string;
-  isSubmittingReply: boolean;
   userFirstName: string;
   userLastName: string;
   onReplyContentChange: (value: string) => void;
@@ -263,9 +323,7 @@ type ReplyComposerProps = {
 function ReplyComposer({
   commentAuthorName,
   replyContent,
-  isSubmittingReply,
   userFirstName,
-  userLastName,
   onReplyContentChange,
   onSubmitReply,
   replyFocusKey,
@@ -283,9 +341,10 @@ function ReplyComposer({
           <Image
             height={24}
             width={24}
-            src={avatarUrl + (userFirstName + userLastName)}
+            src={avatarUrl + userFirstName}
             alt="_comment_img"
             className="_comment_img"
+            unoptimized
           />
         </div>
         <div className="_feed_inner_comment_box_content_txt">
@@ -301,7 +360,6 @@ function ReplyComposer({
                 void onSubmitReply();
               }
             }}
-            disabled={isSubmittingReply}
             rows={2}
           />
         </div>

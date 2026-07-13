@@ -119,10 +119,7 @@ export default function PostCard({
               <Image
                 height={44}
                 width={44}
-                src={
-                  avatarUrl +
-                  (postItem.author.firstName + postItem.author.firstName)
-                }
+                src={avatarUrl + postItem.author.firstName}
                 alt="post-img"
                 className="_post_img"
                 unoptimized
@@ -353,7 +350,7 @@ export default function PostCard({
                   key={postItem.id + ':' + 'likes:' + likedUsers.firstName}
                   width={30}
                   height={30}
-                  src={avatarUrl + (likedUsers.firstName + likedUsers.lastName)}
+                  src={avatarUrl + likedUsers.firstName}
                   alt="Image"
                   className={cn(
                     index === 0
@@ -364,6 +361,7 @@ export default function PostCard({
                           ? '_react_img _rect_img_mbl_none'
                           : '',
                   )}
+                  unoptimized
                 />
               ))}
               {postItem.likesCount > 5 ? (

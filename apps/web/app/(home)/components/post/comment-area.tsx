@@ -202,11 +202,10 @@ export default function CommentArea({
                 <Image
                   height={25}
                   width={25}
-                  src={
-                    avatarUrl + ((user?.firstName as string) + user?.lastName)
-                  }
+                  src={avatarUrl + (user?.firstName as string)}
                   alt="user-profile"
                   className="_comment_img"
+                  unoptimized
                 />
               </div>
               <div className="_feed_inner_comment_box_content_txt">
@@ -224,7 +223,7 @@ export default function CommentArea({
                 />
               </div>
             </div>
-            <div className="_feed_inner_comment_box_icon">
+            {/*<div className="_feed_inner_comment_box_icon">
               <button
                 type="button"
                 className="_feed_inner_comment_box_icon_btn"
@@ -265,7 +264,7 @@ export default function CommentArea({
                   />
                 </svg>
               </button>
-            </div>
+            </div>*/}
           </form>
         </div>
       </div>

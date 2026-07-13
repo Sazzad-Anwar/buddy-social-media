@@ -46,6 +46,7 @@ export default function ProfilePanel({ firstName, lastName }: Props) {
           style={{
             borderRadius: '50%',
           }}
+          unoptimized
         />
       </div>
       <div className="_header_nav_dropdown">
@@ -89,6 +90,7 @@ export default function ProfilePanel({ firstName, lastName }: Props) {
               style={{
                 borderRadius: '50%',
               }}
+              unoptimized
             />
           </div>
           <div className="_nav_profile_dropdown_info_txt">

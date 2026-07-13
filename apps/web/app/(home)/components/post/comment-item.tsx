@@ -1,7 +1,6 @@
 'use client';
 
 import type { CommentCard } from '@repo/types';
-import type { ReplyCard } from '@repo/types';
 import dayjs from 'dayjs';
 import { avatarUrl } from 'lib/constants';
 import Image from 'next/image';
@@ -9,7 +8,6 @@ import Link from 'next/link';
 import { cn } from 'lib/utils';
 import { ReplyThread } from './reply-thread';
 import {
-  addReplyAction,
   likeCommentAction,
   unlikeCommentAction,
 } from '../../action';
@@ -24,15 +22,10 @@ export function CommentItem({ postId, comment }: Props) {
   const authorName = `${comment.author.firstName} ${comment.author.lastName}`;
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState('');
-  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [isLikedByMe, setIsLikedByMe] = useState(comment.likedByMe);
   const [likeCount, setLikeCount] = useState(comment.likesCount);
   const [replyCount, setReplyCount] = useState(comment.repliesCount);
-  const [replyRefreshKey, setReplyRefreshKey] = useState(0);
   const [replyFocusKey, setReplyFocusKey] = useState(0);
-  const [optimisticReply, setOptimisticReply] = useState<ReplyCard | null>(
-    null,
-  );
   const isTogglingLikeRef = useRef(false);
 
   useEffect(() => {
@@ -68,31 +61,6 @@ export function CommentItem({ postId, comment }: Props) {
       console.log(error);
     } finally {
       isTogglingLikeRef.current = false;
-    }
-  };
-
-  const submitReply = async () => {
-    const trimmedReply = replyContent.trim();
-    if (!trimmedReply || isSubmittingReply) {
-      return;
-    }
-
-    try {
-      setIsSubmittingReply(true);
-      const createdReply = await addReplyAction(
-        postId,
-        comment.id,
-        trimmedReply,
-      );
-      setReplyContent('');
-      setReplyCount((current) => current + 1);
-      setOptimisticReply(createdReply);
-      setReplyRefreshKey((current) => current + 1);
-      setReplyFocusKey((current) => current + 1);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setIsSubmittingReply(false);
     }
   };
 
@@ -238,12 +206,13 @@ export function CommentItem({ postId, comment }: Props) {
               replyCount={replyCount}
               isReplying={isReplying}
               replyContent={replyContent}
-              isSubmittingReply={isSubmittingReply}
               onReplyContentChange={setReplyContent}
               onToggleReplying={() => setIsReplying((current) => !current)}
-              onSubmitReply={submitReply}
-              replyRefreshKey={replyRefreshKey}
-              optimisticReply={optimisticReply}
+              onReplySubmitted={() => {
+                setReplyCount((current) => current + 1);
+                setReplyContent('');
+                setReplyFocusKey((current) => current + 1);
+              }}
               replyFocusKey={replyFocusKey}
             />
           ) : null}
