@@ -84,6 +84,12 @@ export const commentLikePreviewUserSchema = z.object({
   lastName: z.string(),
 });
 
+export const replyLikePreviewUserSchema = z.object({
+  id: z.number().int(),
+  firstName: z.string(),
+  lastName: z.string(),
+});
+
 export const createCommentSchema = z.object({
   content: z.string().min(1, 'Comment content is required').max(2000),
 });
@@ -102,6 +108,29 @@ export const commentCardSchema = z.object({
   updatedAt: z.string(),
   author: postAuthorSchema,
   likedUsers: z.array(commentLikePreviewUserSchema).max(5),
+  likedByMe: z.boolean(),
+});
+
+export const createReplySchema = z.object({
+  content: z.string().min(1, 'Reply content is required').max(2000),
+  parentReplyId: z.number().int().positive().optional(),
+});
+
+export const replyThreadQuerySchema = cursorPaginationSchema.extend({
+  parentReplyId: z.coerce.number().int().positive().optional(),
+});
+
+export const replyCardSchema = z.object({
+  id: z.number().int(),
+  commentId: z.number().int(),
+  parentReplyId: z.number().int().nullable(),
+  content: z.string(),
+  repliesCount: z.number().int(),
+  likesCount: z.number().int(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  author: postAuthorSchema,
+  likedUsers: z.array(replyLikePreviewUserSchema).max(5),
   likedByMe: z.boolean(),
 });
 
@@ -162,6 +191,10 @@ export type CommentLikePreviewUser = z.infer<
 export type CreateCommentDto = z.infer<typeof createCommentSchema>;
 export type UpdateCommentDto = z.infer<typeof updateCommentSchema>;
 export type CommentCard = z.infer<typeof commentCardSchema>;
+export type ReplyLikePreviewUser = z.infer<typeof replyLikePreviewUserSchema>;
+export type CreateReplyDto = z.infer<typeof createReplySchema>;
+export type ReplyThreadQueryDto = z.infer<typeof replyThreadQuerySchema>;
+export type ReplyCard = z.infer<typeof replyCardSchema>;
 export type UploadedImageMeta = z.infer<typeof uploadedImageMetaSchema>;
 export type TemporaryPostImage = z.infer<typeof temporaryPostImageSchema>;
 export type ProcessPostImageJob = z.infer<typeof processPostImageJobSchema>;
