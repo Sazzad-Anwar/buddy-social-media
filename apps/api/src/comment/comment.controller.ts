@@ -58,4 +58,14 @@ export class CommentController {
   ) {
     return this.commentService.unlike(postId, commentId, req.user);
   }
+
+  @Get(':commentId/likes')
+  listLikes(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Req() req: AuthRequest,
+    @Query() query: CursorPaginationDto,
+  ) {
+    return this.commentService.listLikes(postId, commentId, query, req.user);
+  }
 }

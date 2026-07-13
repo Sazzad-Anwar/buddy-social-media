@@ -10,12 +10,17 @@ import {
 } from '../common/pagination/cursor-pagination';
 import { REPLY_LIST_CACHE_TTL_SECONDS } from './reply.constants';
 import type { ReplyCard } from './reply.types';
-import type { User } from '@repo/types';
+import type { User, PostLikeUser } from '@repo/types';
 import type { CreateReplyDto } from './dto/create-reply.dto';
 
 type ReplyCursor = {
   createdAt: string;
   id: number;
+};
+
+type LikesCursor = {
+  createdAt: string;
+  userId: number;
 };
 
 const replySummarySelect = {
@@ -107,6 +112,35 @@ function replySummaryKey(reply: {
 
   return {
     scope: 'public' as const,
+  };
+}
+
+const replyLikeSelect = {
+  user: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+    },
+  },
+  createdAt: true,
+  userId: true,
+} satisfies Prisma.ReplyLikeSelect;
+
+function serializeReplyLikeUser(
+  like: Prisma.ReplyLikeGetPayload<{
+    select: typeof replyLikeSelect;
+  }>,
+): PostLikeUser {
+  return {
+    id: like.user.id,
+    firstName: like.user.firstName,
+    lastName: like.user.lastName,
+    email: like.user.email,
+    role: like.user.role,
+    likedAt: like.createdAt.toISOString(),
   };
 }
 
@@ -407,6 +441,67 @@ export class ReplyService {
     return {
       likedByMe: shouldLike,
       likesCount: updated.likesCount,
+    };
+  }
+
+  async listLikes(
+    postId: number,
+    commentId: number,
+    replyId: number,
+    query: { cursor?: string; limit?: number },
+    viewer: User,
+  ): Promise<{
+    items: PostLikeUser[];
+    nextCursor: string | null;
+    hasNextPage: boolean;
+  }> {
+    await this.ensureVisibleComment(postId, commentId, viewer.id);
+
+    const limit = normalizeCursorLimit(query.limit);
+
+    const cursor = decodeCursor<LikesCursor>(query.cursor);
+    const where = cursor
+      ? {
+          replyId,
+          OR: [
+            {
+              createdAt: {
+                lt: new Date(cursor.createdAt),
+              },
+            },
+            {
+              createdAt: new Date(cursor.createdAt),
+              userId: {
+                lt: cursor.userId,
+              },
+            },
+          ],
+        }
+      : {
+          replyId,
+        };
+
+    const likes = await this.db.replyLike.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { userId: 'desc' }],
+      take: limit + 1,
+      select: replyLikeSelect,
+    });
+
+    const hasNextPage = likes.length > limit;
+    const page = hasNextPage ? likes.slice(0, limit) : likes;
+    const items = page.map(serializeReplyLikeUser);
+
+    return {
+      items,
+      nextCursor:
+        hasNextPage && items.length > 0
+          ? encodeCursor<LikesCursor>({
+              createdAt: items[items.length - 1].likedAt,
+              userId: items[items.length - 1].id,
+            })
+          : null,
+      hasNextPage,
     };
   }
 

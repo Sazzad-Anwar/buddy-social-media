@@ -15,11 +15,16 @@ import {
 } from '../common/pagination/cursor-pagination';
 import { COMMENT_LIST_CACHE_TTL_SECONDS } from './comment.constants';
 import type { CommentCard } from './comment.types';
-import type { User } from '@repo/types';
+import type { User, PostLikeUser } from '@repo/types';
 
 type CommentCursor = {
   createdAt: string;
   id: number;
+};
+
+type LikesCursor = {
+  createdAt: string;
+  userId: number;
 };
 
 const commentSummarySelect = {
@@ -79,6 +84,35 @@ function serializeCommentCard(
       lastName: like.user.lastName,
     })),
     likedByMe,
+  };
+}
+
+const commentLikeSelect = {
+  user: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+    },
+  },
+  createdAt: true,
+  userId: true,
+} satisfies Prisma.CommentLikeSelect;
+
+function serializeCommentLikeUser(
+  like: Prisma.CommentLikeGetPayload<{
+    select: typeof commentLikeSelect;
+  }>,
+): PostLikeUser {
+  return {
+    id: like.user.id,
+    firstName: like.user.firstName,
+    lastName: like.user.lastName,
+    email: like.user.email,
+    role: like.user.role,
+    likedAt: like.createdAt.toISOString(),
   };
 }
 
@@ -502,6 +536,66 @@ export class CommentService {
     return {
       likedByMe: shouldLike,
       likesCount: updated.likesCount,
+    };
+  }
+
+  async listLikes(
+    postId: number,
+    commentId: number,
+    query: { cursor?: string; limit?: number },
+    viewer: User,
+  ): Promise<{
+    items: PostLikeUser[];
+    nextCursor: string | null;
+    hasNextPage: boolean;
+  }> {
+    await this.ensureVisibleComment(postId, commentId, viewer.id);
+
+    const limit = normalizeCursorLimit(query.limit);
+
+    const cursor = decodeCursor<LikesCursor>(query.cursor);
+    const where = cursor
+      ? {
+          commentId,
+          OR: [
+            {
+              createdAt: {
+                lt: new Date(cursor.createdAt),
+              },
+            },
+            {
+              createdAt: new Date(cursor.createdAt),
+              userId: {
+                lt: cursor.userId,
+              },
+            },
+          ],
+        }
+      : {
+          commentId,
+        };
+
+    const likes = await this.db.commentLike.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { userId: 'desc' }],
+      take: limit + 1,
+      select: commentLikeSelect,
+    });
+
+    const hasNextPage = likes.length > limit;
+    const page = hasNextPage ? likes.slice(0, limit) : likes;
+    const items = page.map(serializeCommentLikeUser);
+
+    return {
+      items,
+      nextCursor:
+        hasNextPage && items.length > 0
+          ? encodeCursor<LikesCursor>({
+              createdAt: items[items.length - 1].likedAt,
+              userId: items[items.length - 1].id,
+            })
+          : null,
+      hasNextPage,
     };
   }
 

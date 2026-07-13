@@ -14,6 +14,7 @@ import type { User } from '@repo/types';
 import { ReplyService } from './reply.service';
 import { CreateReplyDto } from './dto/create-reply.dto';
 import { ReplyThreadQueryDto } from './dto/reply-thread-query.dto';
+import { CursorPaginationDto } from '../common/dto/cursor-pagination.dto';
 
 export type AuthRequest = Request & {
   user: User;
@@ -61,5 +62,22 @@ export class ReplyController {
     @Req() req: AuthRequest,
   ) {
     return this.replyService.unlike(postId, commentId, replyId, req.user);
+  }
+
+  @Get(':replyId/likes')
+  listLikes(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Param('replyId', ParseIntPipe) replyId: number,
+    @Req() req: AuthRequest,
+    @Query() query: CursorPaginationDto,
+  ) {
+    return this.replyService.listLikes(
+      postId,
+      commentId,
+      replyId,
+      query,
+      req.user,
+    );
   }
 }
