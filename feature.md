@@ -14,14 +14,14 @@
 
 # Required functionalities:
 
-- [ ] Ability to create posts with text and image.
+- [x] Ability to create posts with text and image.
 - [x] Show posts with the newest first.
 - [x] Display like/unlike state correctly.
-- [ ] Implement comments, replies, and their like/unlike system.
+- [x] Implement comments, replies, and their like/unlike system.
 - [ ] Show who has liked a post, comment, or reply.
-- [ ] Support private and public posts:
-  - [ ] Private: Visible only to the author
-  - [ ] Public: Visible to everyone
+- [x] Support private and public posts:
+  - [x] Private: Visible only to the author
+  - [x] Public: Visible to everyone
 
 # Deliverables
 

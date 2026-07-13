@@ -286,7 +286,7 @@ export default function LeftSidebar() {
                     src="/images/feed_event1.png"
                     alt="Image"
                     className="_card_img"
-                    loading="lazy"
+                    loading="eager"
                     width={213}
                     height={129}
                   />
@@ -318,7 +318,7 @@ export default function LeftSidebar() {
                     src="/images/feed_event1.png"
                     alt="Image"
                     className="_card_img"
-                    loading="lazy"
+                    loading="eager"
                     width={213}
                     height={129}
                   />

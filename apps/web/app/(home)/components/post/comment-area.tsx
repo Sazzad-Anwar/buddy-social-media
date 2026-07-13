@@ -6,13 +6,13 @@ import {
   type CommentPage,
 } from '../../action';
 import { avatarUrl } from 'lib/constants';
+import dayjs from 'dayjs';
 import Image from 'next/image';
+import useSWRInfinite from 'swr/infinite';
 import Link from 'next/link';
 import { Dispatch, SetStateAction, useMemo, useState } from 'react';
-import { cn } from 'lib/utils';
-import dayjs from 'dayjs';
-import useSWRInfinite from 'swr/infinite';
-import { CommentCard } from '@repo/types';
+import { CommentItem } from './comment-item';
+import { useCurrentUserStore } from 'store/current-user.store';
 
 type Props = {
   postId: number;
@@ -28,98 +28,12 @@ type CommentPageKey = readonly [
   number,
 ];
 
-function CommentItem({ comment }: { comment: CommentCard }) {
-  const authorName = `${comment.author.firstName} ${comment.author.lastName}`;
-
-  return (
-    <div className="space-y-4">
-      <div key={comment.id} className="_comment_main">
-        <div className="_comment_image">
-          <Link href="/" className="_comment_image_link">
-            <Image
-              height={40}
-              width={40}
-              src={avatarUrl + `${authorName}`}
-              alt="comment-img"
-              className="_comment_img1"
-              unoptimized
-            />
-          </Link>
-        </div>
-        <div className="_comment_area">
-          <div className="_comment_details">
-            <div className="_comment_details_top">
-              <div className="_comment_name">
-                <Link href="/">
-                  <h4 className="_comment_name_title">{authorName}</h4>
-                </Link>
-              </div>
-            </div>
-            <div className="_comment_status">
-              <p className="_comment_status_text">
-                <span>{comment.content}</span>
-              </p>
-            </div>
-            {comment.likesCount > 0 ? (
-              <div className="_total_reactions">
-                <div className="_total_react">
-                  <span
-                    className={cn(
-                      '_reaction_like',
-                      comment.likedByMe ? '_reaction_active' : '',
-                    )}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="feather feather-thumbs-up"
-                    >
-                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
-                    </svg>
-                  </span>{' '}
-                </div>
-                <span className="_total">{comment.likesCount}</span>
-              </div>
-            ) : null}
-            <div className="_comment_reply">
-              <div className="_comment_reply_num">
-                <ul className="_comment_reply_list">
-                  <li>
-                    <span>Like.</span>
-                  </li>
-                  <li>
-                    <span>Reply.</span>
-                  </li>
-                  <li>
-                    <span>Share</span>
-                  </li>
-                  <li>
-                    <span className="_time_link">
-                      {dayjs(comment.createdAt).fromNow()}
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function CommentArea({
   postId,
   setCommentCount,
   totalComments,
 }: Props) {
+  const user = useCurrentUserStore((state) => state.user);
   const [content, setContent] = useState('');
   const limit = 10;
   const {
@@ -156,9 +70,16 @@ export default function CommentArea({
     [pages],
   );
 
+  const refreshComments = async () => {
+    await mutate(undefined, {
+      revalidate: true,
+    });
+  };
+
   const lastPage = pages?.[pages.length - 1];
   const hasNextPage = lastPage?.hasNextPage ?? false;
   const loadingMore = isValidating && size > 1;
+
   const loadMore = () => {
     if (!hasNextPage || loadingMore) {
       return;
@@ -167,13 +88,12 @@ export default function CommentArea({
     setSize(size + 1);
   };
 
-  const postComment = async (postId: number) => {
+  const postComment = async () => {
     try {
-      if (content !== '') {
-        await addCommentAction(postId, content);
-        mutate(undefined, {
-          revalidate: true,
-        });
+      const trimmedContent = content.trim();
+      if (trimmedContent !== '') {
+        await addCommentAction(postId, trimmedContent);
+        await refreshComments();
       }
       setContent('');
       setCommentCount(totalComments + 1);
@@ -192,8 +112,10 @@ export default function CommentArea({
                 <Image
                   height={25}
                   width={25}
-                  src="/images/comment_img.png"
-                  alt=""
+                  src={
+                    avatarUrl + ((user?.firstName as string) + user?.lastName)
+                  }
+                  alt="user-profile"
                   className="_comment_img"
                 />
               </div>
@@ -206,7 +128,7 @@ export default function CommentArea({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      postComment(postId);
+                      void postComment();
                     }
                   }}
                 />
@@ -277,13 +199,17 @@ export default function CommentArea({
         ) : (
           <>
             {comments.map((comment) => (
-              <CommentItem key={'comment-' + comment.id} comment={comment} />
+              <CommentItem
+                key={'comment-' + comment.id}
+                postId={postId}
+                comment={comment}
+              />
             ))}
           </>
         )}
 
         {error ? (
-          <p className="mt-2 text-sm text-danger text-center">
+          <p className="_previous_comment_txt">
             {error instanceof Error ? error.message : 'Failed to load comments'}
           </p>
         ) : null}

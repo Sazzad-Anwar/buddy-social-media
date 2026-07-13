@@ -26,47 +26,6 @@ function mergePosts(current: FeedPost[], next: FeedPost[]) {
   return merged;
 }
 
-function getLikedByLabel(post: FeedPost) {
-  const likedUsers = post.likedUsers.slice(0, 5);
-
-  if (likedUsers.length === 0) {
-    return 'No likes yet';
-  }
-
-  const names = likedUsers.map((user) => `${user.firstName} ${user.lastName}`);
-  const remaining = Math.max(post.likesCount - likedUsers.length, 0);
-
-  return remaining > 0
-    ? `Liked by ${names.join(', ')} and ${remaining} more`
-    : `Liked by ${names.join(', ')}`;
-}
-
-function PostImage({ post }: { post: FeedPost }) {
-  if (post.imageStatus !== 'READY' || !post.imageUrl) {
-    return (
-      <div className="_feed_inner_timeline_image flex min-h-[240px] items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-500">
-        {post.imageStatus === 'PENDING'
-          ? 'Image is processing'
-          : post.imageStatus === 'FAILED'
-            ? 'Image failed to load'
-            : 'No image'}
-      </div>
-    );
-  }
-
-  return (
-    <div className="_feed_inner_timeline_image">
-      <Image
-        width={498}
-        height={328}
-        src={post.imageUrl}
-        alt="Post media"
-        className="_time_img"
-      />
-    </div>
-  );
-}
-
 export default function FeedArea({ initialFeed }: FeedAreaProps) {
   const [items, setItems] = useState<FeedPost[]>(initialFeed.items);
   const [nextCursor, setNextCursor] = useState<string | null>(
@@ -74,9 +33,43 @@ export default function FeedArea({ initialFeed }: FeedAreaProps) {
   );
   const [hasNextPage, setHasNextPage] = useState(initialFeed.hasNextPage);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const loadingRef = useRef(false);
+
+  useEffect(() => {
+    const handlePostCreated = (event: Event) => {
+      const customEvent = event as CustomEvent<FeedPost>;
+      const createdPost = customEvent.detail;
+
+      if (!createdPost) {
+        return;
+      }
+
+      setItems((current) => mergePosts([createdPost], current));
+    };
+
+    const handlePostDeleted = (event: Event) => {
+      const customEvent = event as CustomEvent<{ postId: number }>;
+      const deletedPostId = customEvent.detail?.postId;
+
+      if (deletedPostId === undefined) {
+        return;
+      }
+
+      setItems((current) =>
+        current.filter((post) => post.id !== deletedPostId),
+      );
+    };
+
+    window.addEventListener('post:created', handlePostCreated);
+    window.addEventListener('post:deleted', handlePostDeleted);
+
+    return () => {
+      window.removeEventListener('post:created', handlePostCreated);
+      window.removeEventListener('post:deleted', handlePostDeleted);
+    };
+  }, []);
 
   useEffect(() => {
     loadingRef.current = isLoading;

@@ -1668,6 +1668,9 @@
   -ms-flex-align: center;
   align-items: center;
 }
+._feed_inner_text_area_bottom_photo_link_active {
+  color: var(--color5);
+}
 ._feed_inner_text_area_bottom_photo_link:hover {
   color: var(--color5);
 }

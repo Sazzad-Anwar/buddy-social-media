@@ -104,9 +104,8 @@ function createServiceFixture() {
     setPostCard: [] as unknown[][],
     getLikesPage: [] as unknown[][],
     setLikesPage: [] as unknown[][],
-    saveTemporaryUpload: [] as unknown[][],
     removeFile: [] as unknown[][],
-    enqueuePostImageProcessing: [] as unknown[][],
+    processAndUploadPostImage: [] as unknown[][],
   };
 
   let visiblePostResult: typeof postSummary | null = postSummary;
@@ -114,14 +113,6 @@ function createServiceFixture() {
   let cachedPostCard = null as null | typeof expectedPostCard;
   let cachedLikesPage = null as null | Array<{ id: number; likedAt: string }>;
   let likeRecord = null as null | { postId: number; userId: number };
-  let failImageJob = false;
-  let savedTempImage = {
-    tempPath: '/tmp/post-image.jpg',
-    originalName: 'post-image.jpg',
-    size: 1234,
-    mimetype: 'image/jpeg',
-    postId: 101,
-  };
 
   const db = {
     $transaction: async (cb: any) => cb(db),
@@ -225,25 +216,20 @@ function createServiceFixture() {
   };
 
   const media = {
-    saveTemporaryUpload: async (...args: unknown[]) => {
-      calls.saveTemporaryUpload.push(args);
-      return savedTempImage;
-    },
     removeFile: async (...args: unknown[]) => {
       calls.removeFile.push(args);
     },
     deleteUploadedFile: async (...args: unknown[]) => {
       calls.removeFile.push(args);
     },
-  };
-
-  const jobs = {
-    enqueuePostImageProcessing: async (...args: unknown[]) => {
-      calls.enqueuePostImageProcessing.push(args);
-      if (failImageJob) {
-        throw new Error('queue failed');
-      }
-      return undefined;
+    processAndUploadPostImage: async (...args: unknown[]) => {
+      calls.processAndUploadPostImage.push(args);
+      return {
+        key: 'post-image-key',
+        ufsUrl: 'https://files.example.com/post-image.webp',
+        name: 'post-image.webp',
+        size: 1234,
+      };
     },
   };
 
@@ -251,7 +237,6 @@ function createServiceFixture() {
     db as any,
     cache as any,
     media as any,
-    jobs as any,
   );
 
   return {
@@ -274,10 +259,6 @@ function createServiceFixture() {
     setLikeRecord: (value: null | { postId: number; userId: number }) => {
       likeRecord = value;
     },
-    setFailImageJob: (value: boolean) => {
-      failImageJob = value;
-    },
-    tempImage: savedTempImage,
   };
 }
 
@@ -296,32 +277,22 @@ describe('PostService', () => {
 
     expect(result).toEqual(expectedPostCard);
     expect(fixture.calls.postCreate.length).toBe(1);
-    expect(fixture.calls.saveTemporaryUpload.length).toBe(0);
     expect(fixture.calls.bumpFeedVersion.length).toBe(1);
     expect(fixture.calls.deletePostCards).toEqual([
       [postSummary.id, viewer.id],
     ]);
   });
 
-  it('marks an uploaded post image as failed when the job queue throws', async () => {
-    fixture.setFailImageJob(true);
-
+  it('creates a post with image media synchronously', async () => {
     const result = await fixture.service.create(
       { content: 'With image', visibility: 'PUBLIC' } as any,
       viewer,
-      {
-        tempPath: '/tmp/post-image.jpg',
-        originalName: 'post-image.jpg',
-        size: 1234,
-        mimetype: 'image/jpeg',
-      } as any,
+      { buffer: Buffer.from('image'), originalname: 'post-image.jpg', size: 1234, mimetype: 'image/jpeg' } as any,
     );
 
-    expect(result.imageStatus).toBe('FAILED');
-    expect(fixture.calls.saveTemporaryUpload.length).toBe(1);
-    expect(fixture.calls.enqueuePostImageProcessing.length).toBe(1);
-    expect(fixture.calls.removeFile).toEqual([['/tmp/post-image.jpg']]);
-    expect(fixture.calls.postUpdate.length).toBe(1);
+    expect(result).toEqual(expectedPostCard);
+    expect(fixture.calls.processAndUploadPostImage.length).toBe(1);
+    expect(fixture.calls.postCreate.length).toBe(1);
   });
 
   it('returns a paginated feed from the database on cache miss', async () => {

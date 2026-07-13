@@ -120,6 +120,30 @@ export class MediaService {
     };
   }
 
+  async processAndUploadPostImage(
+    file: UploadedImageLikeFile,
+    postId: number,
+  ): Promise<UploadedImageMeta> {
+    const tempImage = await this.saveTemporaryUpload(file, postId);
+    let processedTempPath: string | null = null;
+
+    try {
+      const processed = await this.processToWebp(
+        tempImage.tempPath,
+        tempImage.originalName,
+        postId,
+      );
+      processedTempPath = processed.tempPath;
+
+      return await this.uploadWebp(processed, postId);
+    } finally {
+      await this.removeFile(tempImage.tempPath);
+      if (processedTempPath) {
+        await this.removeFile(processedTempPath);
+      }
+    }
+  }
+
   async removeFile(filePath: string): Promise<void> {
     try {
       await fs.unlink(filePath);

@@ -7,6 +7,7 @@ import { cn } from 'lib/utils';
 import { useEffect, useRef, useState } from 'react';
 import CommentArea from './comment-area';
 import {
+  deletePostAction,
   getPostByIdAction,
   likePostAction,
   unlikePostAction,
@@ -68,6 +69,17 @@ export default function PostCard({ postItem: postDetails }: Props) {
       await unlikePostAction(postId);
       const data = await getPostByIdAction(postId);
       setPostItem(data);
+    } catch (error: unknown) {
+      console.log(error);
+    }
+  };
+
+  const deletePost = async (postId: number) => {
+    try {
+      await deletePostAction(postId);
+      window.dispatchEvent(
+        new CustomEvent('post:deleted', { detail: { postId } }),
+      );
     } catch (error: unknown) {
       console.log(error);
     }
@@ -250,12 +262,17 @@ export default function PostCard({ postItem: postDetails }: Props) {
                     Edit Post
                   </Link>
                 </li>
-                {user?.email !== postItem.author.email ? (
+                {user?.email === postItem.author.email ? (
                   <li className="_feed_timeline_dropdown_item">
-                    <Link
-                      href="/"
+                    <span
+                      style={{
+                        cursor: 'pointer',
+                      }}
                       className="_feed_timeline_dropdown_link"
-                      onClick={() => setIsDropdownOpen(false)}
+                      onClick={() => {
+                        deletePost(postItem.id);
+                        setIsDropdownOpen(false);
+                      }}
                     >
                       <span>
                         <svg
@@ -275,7 +292,7 @@ export default function PostCard({ postItem: postDetails }: Props) {
                         </svg>
                       </span>
                       Delete Post
-                    </Link>
+                    </span>
                   </li>
                 ) : null}
               </ul>

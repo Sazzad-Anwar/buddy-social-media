@@ -11,7 +11,6 @@ import {
   MediaService,
   type UploadedImageLikeFile,
 } from '../media/media.service';
-import { PostJobsService } from '../jobs/post-jobs.service';
 import { PostCacheService } from './post-cache.service';
 import {
   decodeCursor,
@@ -145,7 +144,6 @@ export class PostService {
     private readonly db: PrismaService,
     private readonly cache: PostCacheService,
     private readonly media: MediaService,
-    private readonly jobs: PostJobsService,
   ) {}
 
   async create(
@@ -153,38 +151,22 @@ export class PostService {
     author: User,
     file?: UploadedImageLikeFile,
   ): Promise<PostCard> {
-    const tempImage =
+    const uploadedImage =
       file !== undefined
-        ? await this.media.saveTemporaryUpload(file, author.id)
+        ? await this.media.processAndUploadPostImage(file, author.id)
         : null;
 
-    let post = await this.db.post.create({
+    const post = await this.db.post.create({
       data: {
         authorId: author.id,
         content: createPostDto.content,
         visibility: createPostDto.visibility,
-        imageStatus: tempImage ? 'PENDING' : 'READY',
+        imageKey: uploadedImage?.key ?? null,
+        imageUrl: uploadedImage?.ufsUrl ?? null,
+        imageStatus: 'READY',
       },
       select: postSummarySelect,
     });
-
-    if (tempImage?.tempPath) {
-      try {
-        await this.jobs.enqueuePostImageProcessing(tempImage);
-      } catch {
-        await this.db.post.update({
-          where: { id: post.id },
-          data: {
-            imageStatus: 'FAILED',
-          },
-        });
-        await this.media.removeFile(tempImage.tempPath);
-        post = {
-          ...post,
-          imageStatus: 'FAILED',
-        };
-      }
-    }
 
     await this.cache.bumpFeedVersion();
     await this.cache.deletePostCards(post.id, author.id);
@@ -304,71 +286,46 @@ export class PostService {
     file?: UploadedImageLikeFile,
   ): Promise<PostCard> {
     const post = await this.ensureOwnedPost(id, viewer.id);
-    const tempImage =
+    const uploadedImage =
       file !== undefined
-        ? await this.media.saveTemporaryUpload(file, post.id)
+        ? await this.media.processAndUploadPostImage(file, post.id)
         : null;
 
     const nextData = {
       content: updatePostDto.content ?? post.content,
       visibility: updatePostDto.visibility ?? post.visibility,
-      ...(tempImage
+      ...(uploadedImage
         ? {
-            imageKey: null,
-            imageUrl: null,
-            imageStatus: 'PENDING' as const,
+            imageKey: uploadedImage.key,
+            imageUrl: uploadedImage.ufsUrl,
+            imageStatus: 'READY' as const,
           }
         : {}),
     };
 
-    const updated = await this.db.post.update({
-      where: { id },
-      data: nextData,
-      select: postSummarySelect,
-    });
+    let updated;
 
-    if (tempImage?.tempPath) {
-      try {
-        await this.jobs.enqueuePostImageProcessing({
-          ...tempImage,
-          previousImageKey: post.imageKey,
-        });
-      } catch {
-        const reverted = await this.db.post.update({
-          where: { id },
-          data: {
-            imageKey: post.imageKey,
-            imageUrl: post.imageUrl,
-            imageStatus: post.imageKey ? post.imageStatus : 'FAILED',
-          },
-          select: postSummarySelect,
-        });
-        await this.media.removeFile(tempImage.tempPath);
-        await this.cache.bumpFeedVersion();
-        await this.cache.deletePostCards(id, viewer.id);
-
-        return serializePostCard({
-          ...reverted,
-          imageKey: post.imageKey,
-          imageUrl: post.imageUrl,
-          imageStatus: post.imageKey ? post.imageStatus : 'FAILED',
-        });
+    try {
+      updated = await this.db.post.update({
+        where: { id },
+        data: nextData,
+        select: postSummarySelect,
+      });
+    } catch (error) {
+      if (uploadedImage) {
+        await this.media.deleteUploadedFile(uploadedImage.key);
       }
+      throw error;
+    }
+
+    if (uploadedImage && post.imageKey) {
+      await this.media.deleteUploadedFile(post.imageKey);
     }
 
     await this.cache.bumpFeedVersion();
     await this.cache.deletePostCards(id, viewer.id);
 
-    return serializePostCard(
-      tempImage
-        ? {
-            ...updated,
-            imageKey: null,
-            imageUrl: null,
-            imageStatus: 'PENDING',
-          }
-        : updated,
-    );
+    return serializePostCard(updated);
   }
 
   async remove(id: number, viewer: User): Promise<{ id: number }> {
