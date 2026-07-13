@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { logout } from 'app/(auth)/action';
 import { cn } from 'lib/utils';
 import { User } from '@repo/types';
+import { avatarUrl } from 'lib/constants';
 
 type Props = Pick<User, 'firstName' | 'lastName'>;
 
@@ -37,11 +38,14 @@ export default function ProfilePanel({ firstName, lastName }: Props) {
     >
       <div className="_header_nav_profile_image">
         <Image
-          src="/images/profile.png"
+          src={avatarUrl + firstName}
           alt="Image"
           height={24}
           width={24}
           className="_nav_profile_img"
+          style={{
+            borderRadius: '50%',
+          }}
         />
       </div>
       <div className="_header_nav_dropdown">
@@ -79,9 +83,12 @@ export default function ProfilePanel({ firstName, lastName }: Props) {
             <Image
               width={54}
               height={54}
-              src="/images/profile.png"
+              src={avatarUrl + firstName}
               alt="Image"
               className="_nav_drop_img"
+              style={{
+                borderRadius: '50%',
+              }}
             />
           </div>
           <div className="_nav_profile_dropdown_info_txt">

@@ -1,10 +1,10 @@
 'use client';
 
-import Image from 'next/image';
 import PostCard from '../post/post-card';
 import { useEffect, useRef, useState } from 'react';
 import type { FeedPage, PostCard as FeedPost } from '@repo/types';
 import { loadFeedPageAction } from '../../action';
+import { useRouter } from 'next/navigation';
 
 const PAGE_SIZE = 20;
 
@@ -27,6 +27,7 @@ function mergePosts(current: FeedPost[], next: FeedPost[]) {
 }
 
 export default function FeedArea({ initialFeed }: FeedAreaProps) {
+  const router = useRouter();
   const [items, setItems] = useState<FeedPost[]>(initialFeed.items);
   const [nextCursor, setNextCursor] = useState<string | null>(
     initialFeed.nextCursor,
@@ -38,38 +39,10 @@ export default function FeedArea({ initialFeed }: FeedAreaProps) {
   const loadingRef = useRef(false);
 
   useEffect(() => {
-    const handlePostCreated = (event: Event) => {
-      const customEvent = event as CustomEvent<FeedPost>;
-      const createdPost = customEvent.detail;
-
-      if (!createdPost) {
-        return;
-      }
-
-      setItems((current) => mergePosts([createdPost], current));
-    };
-
-    const handlePostDeleted = (event: Event) => {
-      const customEvent = event as CustomEvent<{ postId: number }>;
-      const deletedPostId = customEvent.detail?.postId;
-
-      if (deletedPostId === undefined) {
-        return;
-      }
-
-      setItems((current) =>
-        current.filter((post) => post.id !== deletedPostId),
-      );
-    };
-
-    window.addEventListener('post:created', handlePostCreated);
-    window.addEventListener('post:deleted', handlePostDeleted);
-
-    return () => {
-      window.removeEventListener('post:created', handlePostCreated);
-      window.removeEventListener('post:deleted', handlePostDeleted);
-    };
-  }, []);
+    setItems(initialFeed.items);
+    setNextCursor(initialFeed.nextCursor);
+    setHasNextPage(initialFeed.hasNextPage);
+  }, [initialFeed]);
 
   useEffect(() => {
     loadingRef.current = isLoading;
@@ -137,7 +110,11 @@ export default function FeedArea({ initialFeed }: FeedAreaProps) {
   return (
     <div>
       {items.map((item) => (
-        <PostCard key={item.id} postItem={item} />
+        <PostCard
+          key={item.id}
+          postItem={item}
+          onPostDeleted={() => router.refresh()}
+        />
       ))}
     </div>
   );

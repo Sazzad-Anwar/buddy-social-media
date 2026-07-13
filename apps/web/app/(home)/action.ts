@@ -5,11 +5,15 @@ import {
   commentCardSchema,
   cursorPageSchema,
   feedPageSchema,
+  likeUsersPageSchema,
   PostCard,
   replyCardSchema,
+  type CommentCard,
   type FeedPage,
+  type LikeUsersPage,
 } from '@repo/types';
 import { z } from 'zod';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 const commentPageSchema = cursorPageSchema(commentCardSchema);
 const replyPageSchema = cursorPageSchema(replyCardSchema);
@@ -110,6 +114,26 @@ export async function loadRepliesAction(
   return replyPageSchema.parse(payload);
 }
 
+export async function loadPostLikesAction(
+  postId: number,
+  cursor: string | null,
+  limit = 20,
+): Promise<LikeUsersPage> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (cursor) {
+    query.set('cursor', cursor);
+  }
+
+  const response = await serverRequest(
+    `/post/${postId}/likes?${query.toString()}`,
+    { cache: 'no-store' },
+  );
+
+  const payload = await response.json();
+  throwErrorOnErrorResponse(response, payload);
+  return likeUsersPageSchema.parse(payload);
+}
+
 export async function likePostAction(postId: number) {
   const response = await serverRequest(`/post/${postId}/like`, {
     method: 'POST',
@@ -169,7 +193,10 @@ export async function getPostByIdAction(postId: number): Promise<PostCard> {
   return payload;
 }
 
-export async function addCommentAction(postId: number, content: string) {
+export async function addCommentAction(
+  postId: number,
+  content: string,
+): Promise<CommentCard> {
   const response = await serverRequest(`/post/${postId}/comments`, {
     method: 'POST',
     body: JSON.stringify({ content }),
@@ -181,7 +208,7 @@ export async function addCommentAction(postId: number, content: string) {
 
   throwErrorOnErrorResponse(response, payload);
 
-  return payload;
+  return commentCardSchema.parse(payload);
 }
 
 export async function addReplyAction(
@@ -230,6 +257,8 @@ export async function createPostAction(params: {
   const payload = await response.json();
 
   throwErrorOnErrorResponse(response, payload);
+  revalidateTag('feed', 'max');
+  revalidatePath('/', 'page');
   return payload;
 }
 
@@ -276,5 +305,50 @@ export async function deletePostAction(postId: number) {
   const payload = await response.json();
 
   throwErrorOnErrorResponse(response, payload);
+  revalidateTag('feed', 'max');
+  revalidatePath('/', 'page');
   return payload;
+}
+
+export async function loadCommentLikesAction(
+  postId: number,
+  commentId: number,
+  cursor: string | null,
+  limit = 20,
+): Promise<LikeUsersPage> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (cursor) {
+    query.set('cursor', cursor);
+  }
+
+  const response = await serverRequest(
+    `/post/${postId}/comments/${commentId}/likes?${query.toString()}`,
+    { cache: 'no-store' },
+  );
+
+  const payload = await response.json();
+  throwErrorOnErrorResponse(response, payload);
+  return likeUsersPageSchema.parse(payload);
+}
+
+export async function loadReplyLikesAction(
+  postId: number,
+  commentId: number,
+  replyId: number,
+  cursor: string | null,
+  limit = 20,
+): Promise<LikeUsersPage> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (cursor) {
+    query.set('cursor', cursor);
+  }
+
+  const response = await serverRequest(
+    `/post/${postId}/comments/${commentId}/replies/${replyId}/likes?${query.toString()}`,
+    { cache: 'no-store' },
+  );
+
+  const payload = await response.json();
+  throwErrorOnErrorResponse(response, payload);
+  return likeUsersPageSchema.parse(payload);
 }

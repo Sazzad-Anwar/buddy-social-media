@@ -3,7 +3,6 @@
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPostAction } from '../../action';
-import type { PostCard } from '@repo/types';
 import Image from 'next/image';
 import { cn } from 'lib/utils';
 import { useCurrentUserStore } from 'store/current-user.store';
@@ -69,17 +68,11 @@ export default function CreatePost() {
     try {
       setIsSubmitting(true);
 
-      const payload = await createPostAction({
+      await createPostAction({
         content: content.trim() || (selectedImage ? ' ' : ''),
         image: selectedImage ?? undefined,
         visibility,
       });
-
-      window.dispatchEvent(
-        new CustomEvent<PostCard>('post:created', {
-          detail: payload,
-        }),
-      );
 
       setContent('');
       setVisibility('PUBLIC');

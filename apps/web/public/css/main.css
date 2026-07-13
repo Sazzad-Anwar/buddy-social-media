@@ -3477,6 +3477,9 @@
 ._dark_wrapper ._header_nav_dropdown_btn svg path {
   fill: var(--bg2);
 }
+._feed_reaction_comment_active {
+  background: #123150;
+}
 ._dark_wrapper ._feed_reaction:hover {
   background: #123150;
 }
@@ -6063,3 +6066,58 @@
   margin: 0 6px 0 0;
 }
 /*--- chat mobile seetings css end ----*/
+
+/*--- Like Tooltip css ----*/
+.like-tooltip {
+  background: var(--bg2);
+  border-color: var(--bg4);
+  color: var(--color);
+}
+.like-tooltip .like-tooltip-header {
+  border-color: var(--bg4);
+  border-bottom: 1px solid #11263c;
+  color: var(--color6);
+}
+.like-tooltip .like-tooltip-name {
+  color: var(--color);
+}
+.like-tooltip .like-tooltip-count {
+  color: var(--color6);
+}
+.like-tooltip .like-tooltip-more {
+  color: var(--color5);
+}
+.like-tooltip .like-tooltip-more:hover {
+  background: var(--bg3);
+}
+.like-tooltip .like-tooltip-loading {
+  color: var(--color7);
+}
+/*--- Like Tooltip css end ----*/
+
+/*--- Like Tooltip dark mode ----*/
+._dark_wrapper .like-tooltip {
+  background: var(--bg5);
+  border-color: var(--bg6);
+  color: var(--bg2);
+}
+._dark_wrapper .like-tooltip .like-tooltip-header {
+  border-color: var(--bg6);
+  color: var(--bg2);
+}
+._dark_wrapper .like-tooltip .like-tooltip-name {
+  color: var(--bg2);
+}
+._dark_wrapper .like-tooltip .like-tooltip-count {
+  color: var(--bg2);
+}
+._dark_wrapper .like-tooltip .like-tooltip-more {
+  color: var(--color5);
+}
+._dark_wrapper .like-tooltip .like-tooltip-more:hover {
+  background: var(--bg6);
+}
+._dark_wrapper .like-tooltip .like-tooltip-loading {
+  color: var(--color3);
+}
+/*--- Like Tooltip dark mode end ----*/

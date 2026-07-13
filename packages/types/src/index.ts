@@ -201,3 +201,5 @@ export type ProcessPostImageJob = z.infer<typeof processPostImageJobSchema>;
 export type ProcessedPostImage = z.infer<typeof processedPostImageSchema>;
 export const feedPageSchema = cursorPageSchema(postCardSchema);
 export type FeedPage = z.infer<typeof feedPageSchema>;
+export const likeUsersPageSchema = cursorPageSchema(postLikeUserSchema);
+export type LikeUsersPage = z.infer<typeof likeUsersPageSchema>;

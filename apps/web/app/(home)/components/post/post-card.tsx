@@ -6,10 +6,11 @@ import relativetime from 'dayjs/plugin/relativeTime';
 import { cn } from 'lib/utils';
 import { useEffect, useRef, useState } from 'react';
 import CommentArea from './comment-area';
+import { LikeTooltip } from './like-tooltip';
 import {
   deletePostAction,
-  getPostByIdAction,
   likePostAction,
+  loadPostLikesAction,
   unlikePostAction,
 } from 'app/(home)/action';
 import Link from 'next/link';
@@ -18,15 +19,18 @@ dayjs.extend(relativetime);
 
 type Props = {
   postItem: PostCard;
+  onPostDeleted?: () => void;
 };
 
-export default function PostCard({ postItem: postDetails }: Props) {
+export default function PostCard({
+  postItem: postDetails,
+  onPostDeleted,
+}: Props) {
   const user = useCurrentUserStore((state) => state.user);
   const [postItem, setPostItem] = useState(postDetails);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [commentsCount, setCommentsCount] = useState(postItem.commentsCount);
-  const [isLikedByMe, setIsLikedByMe] = useState(postItem.likedByMe ?? false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -55,21 +59,44 @@ export default function PostCard({ postItem: postDetails }: Props) {
   }, []);
 
   const likePost = async (postId: number) => {
+    const previous = postItem;
+    const likedUser = user
+      ? { id: user.id, firstName: user.firstName, lastName: user.lastName }
+      : null;
+
+    setPostItem((current) => ({
+      ...current,
+      likedByMe: true,
+      likesCount: current.likesCount + 1,
+      likedUsers: likedUser
+        ? [likedUser, ...current.likedUsers].slice(0, 5)
+        : current.likedUsers,
+    }));
+
     try {
       await likePostAction(postId);
-      const data = await getPostByIdAction(postId);
-      setPostItem(data);
     } catch (error: unknown) {
+      setPostItem(previous);
       console.log(error);
     }
   };
 
   const unlikePost = async (postId: number) => {
+    const previous = postItem;
+
+    setPostItem((current) => ({
+      ...current,
+      likedByMe: false,
+      likesCount: Math.max(0, current.likesCount - 1),
+      likedUsers: user
+        ? current.likedUsers.filter((u) => u.id !== user.id)
+        : current.likedUsers,
+    }));
+
     try {
       await unlikePostAction(postId);
-      const data = await getPostByIdAction(postId);
-      setPostItem(data);
     } catch (error: unknown) {
+      setPostItem(previous);
       console.log(error);
     }
   };
@@ -77,9 +104,7 @@ export default function PostCard({ postItem: postDetails }: Props) {
   const deletePost = async (postId: number) => {
     try {
       await deletePostAction(postId);
-      window.dispatchEvent(
-        new CustomEvent('post:deleted', { detail: { postId } }),
-      );
+      onPostDeleted?.();
     } catch (error: unknown) {
       console.log(error);
     }
@@ -315,36 +340,50 @@ export default function PostCard({ postItem: postDetails }: Props) {
       </div>
       <div className="_feed_inner_timeline_total_reacts _padd_r24 _padd_l24 _mar_b26">
         {postItem.likesCount > 0 ? (
-          <div className="_feed_inner_timeline_total_reacts_image">
-            {postItem.likedUsers.map((likedUsers, index) => (
-              <Image
-                key={postItem.id + ':' + 'likes:' + likedUsers.firstName}
-                width={30}
-                height={30}
-                src={avatarUrl + (likedUsers.firstName + likedUsers.lastName)}
-                alt="Image"
-                className={cn(
-                  index === 0
-                    ? '_react_img1'
-                    : index === 1
-                      ? '_react_img'
-                      : index > 1
-                        ? '_react_img _rect_img_mbl_none'
-                        : '',
-                )}
-              />
-            ))}
-            {postItem.likesCount > 5 ? (
-              <p className="_feed_inner_timeline_total_reacts_para">
-                {postItem.likesCount - 5}+
-              </p>
-            ) : null}
-          </div>
+          <LikeTooltip
+            likesCount={postItem.likesCount}
+            entityKey={`post-likes-${postItem.id}`}
+            fetchLikes={(cursor, limit) =>
+              loadPostLikesAction(postItem.id, cursor, limit)
+            }
+          >
+            <div className="_feed_inner_timeline_total_reacts_image">
+              {postItem.likedUsers.map((likedUsers, index) => (
+                <Image
+                  key={postItem.id + ':' + 'likes:' + likedUsers.firstName}
+                  width={30}
+                  height={30}
+                  src={avatarUrl + (likedUsers.firstName + likedUsers.lastName)}
+                  alt="Image"
+                  className={cn(
+                    index === 0
+                      ? '_react_img1'
+                      : index === 1
+                        ? '_react_img'
+                        : index > 1
+                          ? '_react_img _rect_img_mbl_none'
+                          : '',
+                  )}
+                />
+              ))}
+              {postItem.likesCount > 5 ? (
+                <p className="_feed_inner_timeline_total_reacts_para">
+                  {postItem.likesCount - 5}+
+                </p>
+              ) : null}
+            </div>
+          </LikeTooltip>
         ) : (
           <div className="_feed_inner_timeline_total_reacts_image" />
         )}
         <div className="_feed_inner_timeline_total_reacts_txt">
-          <p className="_feed_inner_timeline_total_reacts_para1">
+          <p
+            onClick={() => setIsCommentsOpen(!isCommentsOpen)}
+            style={{
+              cursor: 'pointer',
+            }}
+            className="_feed_inner_timeline_total_reacts_para1"
+          >
             <span>{commentsCount}</span> Comment
             {commentsCount > 1 ? 's' : ''}
           </p>
@@ -367,15 +406,14 @@ export default function PostCard({ postItem: postDetails }: Props) {
             } else {
               likePost(postItem.id);
             }
-            setIsLikedByMe(!isLikedByMe);
           }}
           className={cn(
             '_feed_inner_timeline_reaction_emoji _feed_reaction',
-            isLikedByMe ? ' _feed_reaction_active' : '',
+            postItem.likedByMe ? ' _feed_reaction_active' : '',
           )}
         >
           <span className="_feed_inner_timeline_reaction_link">
-            <span className={cn(isLikedByMe ? '_reaction_like' : '')}>
+            <span className={cn(postItem.likedByMe ? '_reaction_like' : '')}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -396,7 +434,10 @@ export default function PostCard({ postItem: postDetails }: Props) {
         </button>
         <button
           onClick={() => setIsCommentsOpen(!isCommentsOpen)}
-          className="_feed_inner_timeline_reaction_comment _feed_reaction"
+          className={cn(
+            '_feed_inner_timeline_reaction_comment _feed_reaction',
+            isCommentsOpen ? '_feed_reaction_comment_active' : '',
+          )}
         >
           <span className="_feed_inner_timeline_reaction_link">
             <span>

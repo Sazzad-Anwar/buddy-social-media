@@ -6,13 +6,13 @@ import {
   type CommentPage,
 } from '../../action';
 import { avatarUrl } from 'lib/constants';
-import dayjs from 'dayjs';
 import Image from 'next/image';
 import useSWRInfinite from 'swr/infinite';
 import Link from 'next/link';
 import { Dispatch, SetStateAction, useMemo, useState } from 'react';
 import { CommentItem } from './comment-item';
 import { useCurrentUserStore } from 'store/current-user.store';
+import type { CommentCard } from '@repo/types';
 
 type Props = {
   postId: number;
@@ -70,12 +70,6 @@ export default function CommentArea({
     [pages],
   );
 
-  const refreshComments = async () => {
-    await mutate(undefined, {
-      revalidate: true,
-    });
-  };
-
   const lastPage = pages?.[pages.length - 1];
   const hasNextPage = lastPage?.hasNextPage ?? false;
   const loadingMore = isValidating && size > 1;
@@ -89,16 +83,112 @@ export default function CommentArea({
   };
 
   const postComment = async () => {
+    const trimmedContent = content.trim();
+    if (!trimmedContent) {
+      return;
+    }
+
+    const optimisticComment: CommentCard = {
+      id: -Date.now(),
+      postId,
+      content: trimmedContent,
+      repliesCount: 0,
+      likesCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      author: user
+        ? {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
+          }
+        : {
+            id: 0,
+            firstName: 'Unknown',
+            lastName: '',
+            email: '',
+            role: 'USER',
+          },
+      likedUsers: [],
+      likedByMe: false,
+    };
+
+    setContent('');
+    setCommentCount(totalComments + 1);
+
+    await mutate(
+      (currentPages): CommentPage[] | undefined => {
+        if (!currentPages || currentPages.length === 0) {
+          return [
+            {
+              items: [optimisticComment],
+              nextCursor: null,
+              hasNextPage: false,
+            },
+          ];
+        }
+
+        const [firstPage, ...restPages] = currentPages;
+
+        if (!firstPage) {
+          return [
+            {
+              items: [optimisticComment],
+              nextCursor: null,
+              hasNextPage: false,
+            },
+          ];
+        }
+
+        return [
+          {
+            items: [optimisticComment, ...firstPage.items],
+            nextCursor: firstPage.nextCursor,
+            hasNextPage: firstPage.hasNextPage,
+          },
+          ...restPages,
+        ];
+      },
+      { revalidate: false },
+    );
+
     try {
-      const trimmedContent = content.trim();
-      if (trimmedContent !== '') {
-        await addCommentAction(postId, trimmedContent);
-        await refreshComments();
-      }
-      setContent('');
-      setCommentCount(totalComments + 1);
+      const createdComment = await addCommentAction(postId, trimmedContent);
+
+      await mutate(
+        (currentPages) => {
+          if (!currentPages) return currentPages;
+
+          return currentPages.map((page) => ({
+            ...page,
+            items: page.items.map((item) =>
+              item.id === optimisticComment.id ? createdComment : item,
+            ),
+          }));
+        },
+        { revalidate: false },
+      );
     } catch (error) {
       console.log(error);
+
+      await mutate(
+        (currentPages) => {
+          if (!currentPages) return currentPages;
+
+          return currentPages.map((page) => ({
+            ...page,
+            items: page.items.filter(
+              (item) => item.id !== optimisticComment.id,
+            ),
+          }));
+        },
+        { revalidate: false },
+      );
+
+      setContent(trimmedContent);
+      setCommentCount(totalComments);
     }
   };
 
@@ -180,61 +270,67 @@ export default function CommentArea({
         </div>
       </div>
 
-      <div className="_timline_comment_main">
-        <div className="_previous_comment">
-          {hasNextPage ? (
-            <button
-              type="button"
-              className="_previous_comment_txt"
-              onClick={loadMore}
-              disabled={loadingMore}
-            >
-              {loadingMore ? 'Loading comments...' : 'View more comments'}
-            </button>
+      {isLoading ? (
+        <Loader />
+      ) : (
+        <>
+          {comments.length !== 0 ? (
+            <div className="_timline_comment_main">
+              <div className="_previous_comment">
+                {hasNextPage ? (
+                  <button
+                    type="button"
+                    className="_previous_comment_txt"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? 'Loading comments...' : 'View more comments'}
+                  </button>
+                ) : null}
+              </div>
+
+              {comments.map((comment) => (
+                <CommentItem
+                  key={'comment-' + comment.id}
+                  postId={postId}
+                  comment={comment}
+                />
+              ))}
+
+              {error ? (
+                <p className="_previous_comment_txt">
+                  {error instanceof Error
+                    ? error.message
+                    : 'Failed to load comments'}
+                </p>
+              ) : null}
+            </div>
           ) : null}
-        </div>
-
-        {isLoading && comments.length === 0 ? (
-          <Loader />
-        ) : (
-          <>
-            {comments.map((comment) => (
-              <CommentItem
-                key={'comment-' + comment.id}
-                postId={postId}
-                comment={comment}
-              />
-            ))}
-          </>
-        )}
-
-        {error ? (
-          <p className="_previous_comment_txt">
-            {error instanceof Error ? error.message : 'Failed to load comments'}
-          </p>
-        ) : null}
-      </div>
+        </>
+      )}
     </div>
   );
 }
 
 function Loader() {
   return (
-    <div className="_comment_main">
-      <div className="_comment_image">
-        <Link href="/" className="_comment_image_link">
-          <Image
-            height={40}
-            width={40}
-            src={avatarUrl + ``}
-            alt="comment-img"
-            className="_comment_img1"
-            unoptimized
-          />
-        </Link>
-      </div>
-      <div className="_comment_area">
-        <div style={{ height: 80 }} className="_comment_details"></div>
+    <div className="_timline_comment_main">
+      <div className="_comment_main">
+        <div className="_comment_image">
+          <Link href="/" className="_comment_image_link">
+            <Image
+              height={40}
+              width={40}
+              src={avatarUrl + ``}
+              alt="comment-img"
+              className="_comment_img1"
+              unoptimized
+            />
+          </Link>
+        </div>
+        <div className="_comment_area">
+          <div style={{ height: 80 }} className="_comment_details"></div>
+        </div>
       </div>
     </div>
   );

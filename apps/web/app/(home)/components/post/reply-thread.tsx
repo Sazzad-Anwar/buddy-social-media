@@ -261,7 +261,6 @@ type ReplyComposerProps = {
 };
 
 function ReplyComposer({
-  commentId,
   commentAuthorName,
   replyContent,
   isSubmittingReply,
@@ -387,32 +386,36 @@ function ReplyItem({ postId, commentId, reply }: ReplyItemProps) {
               <span>{reply.content}</span>
             </p>
           </div>
-          <div className="_total_reactions">
-            <div className="_total_react">
-              <span
-                className={cn(
-                  '_reaction_like',
-                  isLikedByMe ? '_reaction_active' : '',
-                )}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="feather feather-thumbs-up"
-                >
-                  <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
-                </svg>
-              </span>{' '}
+          {likeCount > 0 ? (
+            <div className="_total_reactions">
+              <div className="d-inline-flex align-items-center">
+                <div className="_total_react">
+                  <span
+                    className={cn(
+                      '_reaction_like',
+                      isLikedByMe ? '_reaction_active' : '',
+                    )}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="feather feather-thumbs-up"
+                    >
+                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                    </svg>
+                  </span>{' '}
+                </div>
+                <span className="_total">{likeCount}</span>
+              </div>
             </div>
-            <span className="_total">{likeCount}</span>
-          </div>
+          ) : null}
           <div className="_comment_reply">
             <div className="_comment_reply_num">
               <ul className="_comment_reply_list">

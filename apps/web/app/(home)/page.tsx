@@ -9,6 +9,9 @@ import { api } from 'lib/server-api';
 export default async function Home() {
   const initialFeed = await api<FeedPage>('/post?limit=20', {
     cache: 'no-store',
+    next: {
+      tags: ['feed'],
+    },
   });
 
   return (

@@ -30,7 +30,9 @@ export function CommentItem({ postId, comment }: Props) {
   const [replyCount, setReplyCount] = useState(comment.repliesCount);
   const [replyRefreshKey, setReplyRefreshKey] = useState(0);
   const [replyFocusKey, setReplyFocusKey] = useState(0);
-  const [optimisticReply, setOptimisticReply] = useState<ReplyCard | null>(null);
+  const [optimisticReply, setOptimisticReply] = useState<ReplyCard | null>(
+    null,
+  );
   const isTogglingLikeRef = useRef(false);
 
   useEffect(() => {
@@ -77,7 +79,11 @@ export function CommentItem({ postId, comment }: Props) {
 
     try {
       setIsSubmittingReply(true);
-      const createdReply = await addReplyAction(postId, comment.id, trimmedReply);
+      const createdReply = await addReplyAction(
+        postId,
+        comment.id,
+        trimmedReply,
+      );
       setReplyContent('');
       setReplyCount((current) => current + 1);
       setOptimisticReply(createdReply);
@@ -119,60 +125,75 @@ export function CommentItem({ postId, comment }: Props) {
                 <span>{comment.content}</span>
               </p>
             </div>
-            <div className="_total_reactions">
-              <div className="_total_react">
-                <button type="button" className="border-0 bg-transparent p-0">
-                  <span
-                    className={cn(
-                      '_reaction_like',
-                      isLikedByMe ? '_reaction_active' : '',
-                    )}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="feather feather-thumbs-up"
-                    >
-                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
-                    </svg>
-                  </span>{' '}
-                </button>
+            {likeCount > 0 || replyCount > 0 ? (
+              <div className="_total_reactions">
+                {likeCount > 0 ? (
+                  <div className="d-inline-flex align-items-center">
+                    <div className="_total_react">
+                      <button
+                        type="button"
+                        className="border-0 bg-transparent p-0"
+                      >
+                        <span
+                          className={cn(
+                            '_reaction_like',
+                            isLikedByMe ? '_reaction_active' : '',
+                          )}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="feather feather-thumbs-up"
+                          >
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                          </svg>
+                        </span>{' '}
+                      </button>
+                    </div>
+                    <span className="_total">{likeCount}</span>
+                  </div>
+                ) : null}
+                {replyCount > 0 ? (
+                  <div className="d-inline-flex align-items-center">
+                    <div className="_total_react ms-2">
+                      <button
+                        type="button"
+                        className="border-0 bg-transparent p-0"
+                      >
+                        <span
+                          className={cn(
+                            '_reaction_like',
+                            isLikedByMe ? '_reaction_active' : '',
+                          )}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719" />
+                          </svg>
+                        </span>
+                      </button>
+                    </div>
+                    <span className="_total">{replyCount}</span>
+                  </div>
+                ) : null}
               </div>
-              <span className="_total">{likeCount}</span>
-              <div className="_total_react ms-2">
-                <button type="button" className="border-0 bg-transparent p-0">
-                  <span
-                    className={cn(
-                      '_reaction_like',
-                      isLikedByMe ? '_reaction_active' : '',
-                    )}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      // className="lucide lucide-message-circle-icon lucide-message-circle"
-                    >
-                      <path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719" />
-                    </svg>
-                  </span>
-                </button>
-              </div>
-              <span className="_total">{replyCount}</span>
-            </div>
+            ) : null}
             <div className="_comment_reply">
               <div className="_comment_reply_num">
                 <ul className="_comment_reply_list">
