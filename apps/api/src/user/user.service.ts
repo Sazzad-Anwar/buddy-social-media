@@ -37,7 +37,10 @@ export class UserService {
 
   async create(createUserDto: CreateUserDto) {
     return await this.db.users.create({
-      data: createUserDto,
+      data: {
+        ...createUserDto,
+        email: createUserDto.email.toLowerCase(),
+      },
     });
   }
 
@@ -71,7 +74,9 @@ export class UserService {
       data: {
         firstName: updateUserDto.firstName ?? user.firstName,
         lastName: updateUserDto.lastName ?? user.lastName,
-        email: updateUserDto?.email ?? user.email,
+        email: updateUserDto?.email
+          ? updateUserDto.email.toLowerCase()
+          : user.email,
       },
       select: {
         id: true,

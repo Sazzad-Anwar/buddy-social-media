@@ -15,6 +15,17 @@ async function bootstrap() {
       ? parsedPort
       : 3000;
 
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+
+  app.enableCors({
+    origin: frontendUrl,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  });
+
+  app.use(cookieParser());
+
   const config = new DocumentBuilder()
     .setTitle('Buddy Script API')
     .setDescription('Social media platform system with nestjs')
@@ -29,7 +40,6 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
 
-  app.use(cookieParser());
   app.use(
     '/documentation',
     apiReference({

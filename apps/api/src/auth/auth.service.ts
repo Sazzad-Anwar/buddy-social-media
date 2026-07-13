@@ -112,7 +112,10 @@ export class AuthService {
    * Checks if a user exists by email.
    */
   public async checkUserExists(email: string) {
-    const user = await this.db.users.findUnique({ where: { email } });
+    const normalizedEmail = email.toLowerCase();
+    const user = await this.db.users.findUnique({
+      where: { email: normalizedEmail },
+    });
     return { user, isExist: !!user };
   }
 
@@ -120,7 +123,8 @@ export class AuthService {
    * Registers a new user and returns tokens.
    */
   async register(userDto: CreateUserDto, userAgent: IResult) {
-    const { isExist } = await this.checkUserExists(userDto.email);
+    const normalizedEmail = userDto.email.toLowerCase();
+    const { isExist } = await this.checkUserExists(normalizedEmail);
     if (isExist) {
       throw new ConflictException('User already exists');
     }
@@ -130,7 +134,7 @@ export class AuthService {
       data: {
         firstName: userDto.firstName,
         lastName: userDto.lastName,
-        email: userDto.email,
+        email: normalizedEmail,
         role: Role.USER,
         password: hash,
       },
@@ -153,7 +157,8 @@ export class AuthService {
    * Authenticates a user and returns tokens.
    */
   async login(loginDto: LoginDto, userAgent: IResult) {
-    const { user, isExist } = await this.checkUserExists(loginDto.email);
+    const normalizedEmail = loginDto.email.toLowerCase();
+    const { user, isExist } = await this.checkUserExists(normalizedEmail);
     if (!isExist || !user) {
       throw new NotFoundException('User does not exist');
     }
