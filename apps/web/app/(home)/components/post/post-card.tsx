@@ -31,6 +31,7 @@ export default function PostCard({
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [commentsCount, setCommentsCount] = useState(postItem.commentsCount);
+  const [imageError, setImageError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -323,15 +324,33 @@ export default function PostCard({
         </div>
         <h4 className="_feed_inner_timeline_post_title">{postItem.content}</h4>
         {postItem.imageUrl ? (
-          <div className="_feed_inner_timeline_image">
+          <div className="_feed_inner_timeline_image position-relative">
             <Image
               width={498}
               height={328}
               src={postItem.imageUrl}
-              alt="time-img"
-              className="_time_img"
+              alt="post-image"
+              className={`_time_img ${imageError ? 'd-none' : ''}`}
               loading="eager"
+              onError={() => setImageError(true)}
             />
+            {imageError && (
+              <div
+                className="d-flex align-items-center justify-content-center rounded w-100"
+                style={{
+                  height: '300px',
+                  background: 'rgba(24, 144, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                <span
+                  className="text-white fw-semibold"
+                  style={{ fontSize: '16px' }}
+                >
+                  Error while loading the image
+                </span>
+              </div>
+            )}
           </div>
         ) : null}
       </div>
@@ -385,10 +404,10 @@ export default function PostCard({
             <span>{commentsCount}</span> Comment
             {commentsCount > 1 ? 's' : ''}
           </p>
-          <p className="_feed_inner_timeline_total_reacts_para2">
+          {/*<p className="_feed_inner_timeline_total_reacts_para2">
             <span>{postItem.likesCount}</span> Like
             {postItem.likesCount > 1 ? 's' : ''}
-          </p>
+          </p>*/}
         </div>
       </div>
       <div
