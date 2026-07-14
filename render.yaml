@@ -4,7 +4,7 @@ services:
     name: buddy-script-api
     runtime: image
     image:
-      url: https://github.com/your-username/buddy-script.git
+      url: https://github.com/Sazzad-Anwar/buddy-social-media.git
       dockerfilePath: Dockerfile
       dockerContext: .
       target: api-production
@@ -37,7 +37,7 @@ services:
     name: buddy-script-web
     runtime: image
     image:
-      url: https://github.com/your-username/buddy-script.git
+      url: https://github.com/Sazzad-Anwar/buddy-social-media.git
       dockerfilePath: Dockerfile
       dockerContext: .
       target: web-production
