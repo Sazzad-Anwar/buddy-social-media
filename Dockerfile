@@ -65,6 +65,7 @@ COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 # Copy built types package (needed at runtime)
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
 COPY --from=builder /app/packages/types/package.json ./packages/types/
+COPY --from=builder /app/packages/types/node_modules ./packages/types/node_modules
 
 # Copy node_modules - bun hoists packages to root, so workspace node_modules
 # contains symlinks pointing to root node_modules/.bun/. We need both.
@@ -97,6 +98,7 @@ COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
 # Copy built types package (needed at runtime)
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
 COPY --from=builder /app/packages/types/package.json ./packages/types/
+COPY --from=builder /app/packages/types/node_modules ./packages/types/node_modules
 
 EXPOSE 3001
 
