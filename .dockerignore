@@ -51,7 +51,7 @@ railway.json
 **/.turbo
 
 # Bun
-bun.lock
+# bun.lock  # Keep for Docker builds
 
 # Logs
 *.log
