@@ -28,6 +28,11 @@ RUN bun install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
+# Build args for Prisma generate (dummy value - not used at build time)
+# prisma generate only needs the schema, not an actual database connection
+ARG DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+ENV DATABASE_URL=$DATABASE_URL
+
 # Copy node_modules from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
