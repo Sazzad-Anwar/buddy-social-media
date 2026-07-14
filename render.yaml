@@ -1,0 +1,52 @@
+services:
+  # API Service (NestJS)
+  - type: web
+    name: buddy-script-api
+    runtime: image
+    image:
+      url: https://github.com/your-username/buddy-script.git
+      dockerfilePath: Dockerfile
+      dockerContext: .
+      target: api-production
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: FRONTEND_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: UPLOADTHING_TOKEN
+        sync: false
+    healthCheckPath: /documentation
+    autoDeploy: true
+
+  # Web Service (Next.js)
+  - type: web
+    name: buddy-script-web
+    runtime: image
+    image:
+      url: https://github.com/your-username/buddy-script.git
+      dockerfilePath: Dockerfile
+      dockerContext: .
+      target: web-production
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_URL
+        fromService:
+          name: buddy-script-api
+          type: web
+          property: host
+    autoDeploy: true
