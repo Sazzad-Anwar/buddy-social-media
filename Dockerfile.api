@@ -37,7 +37,7 @@ COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps /app/packages/types/node_modules ./packages/types/node_modules
 COPY --from=deps /app/packages/eslint-config/node_modules ./packages/eslint-config/node_modules
 COPY --from=deps /app/packages/jest-config/node_modules ./packages/jest-config/node_modules
-COPY --from=deps /app/packages/typescript-config/node_modules ./packages/typescript-config/node_modules
+# typescript-config has no dependencies, no node_modules to copy
 
 # Copy source code
 COPY . .
