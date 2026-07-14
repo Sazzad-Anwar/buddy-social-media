@@ -5,9 +5,8 @@ services:
     runtime: image
     image:
       url: https://github.com/Sazzad-Anwar/buddy-social-media.git
-      dockerfilePath: Dockerfile
+      dockerfilePath: Dockerfile.api
       dockerContext: .
-      target: api-production
     envVars:
       - key: NODE_ENV
         value: production

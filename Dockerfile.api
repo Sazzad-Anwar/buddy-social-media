@@ -1,0 +1,72 @@
+# ============================================
+# Stage 1: Base - Install bun and dependencies
+# ============================================
+FROM node:22-alpine AS base
+RUN npm install -g bun@latest
+
+# ============================================
+# Stage 2: Install dependencies
+# ============================================
+FROM base AS deps
+WORKDIR /app
+
+# Copy package files for all workspaces
+COPY package.json bun.lock ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/types/package.json ./packages/types/
+
+# Install all dependencies
+RUN bun install --frozen-lockfile
+
+# ============================================
+# Stage 3: Build
+# ============================================
+FROM base AS builder
+WORKDIR /app
+
+# Build args for Prisma generate (dummy value - not used at build time)
+ARG DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+ENV DATABASE_URL=$DATABASE_URL
+
+# Copy node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=deps /app/packages/types/node_modules ./packages/types/node_modules
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN cd apps/api && bunx prisma generate
+
+# Build shared types package first
+RUN bun run build --filter=@repo/types
+
+# Build API
+RUN bun run build --filter=@repo/api
+
+# ============================================
+# Stage 4: Production
+# ============================================
+FROM base AS production
+WORKDIR /app
+
+# Copy built API
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+
+# Copy built types package (needed at runtime)
+COPY --from=builder /app/packages/types/dist ./packages/types/dist
+COPY --from=builder /app/packages/types/package.json ./packages/types/
+
+# Copy node_modules - bun hoists packages to root, so workspace node_modules
+# contains symlinks pointing to root node_modules/.bun/. We need both.
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+
+EXPOSE 3000
+
+WORKDIR /app/apps/api
+
+CMD ["bun", "run", "start:prod"]
