@@ -1,3 +1,5 @@
+jest.mock('../db.service');
+
 import { NotFoundException } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { Role } from '../enums/role.enum';
@@ -26,6 +28,7 @@ const commentSummary = {
   likesCount: 1,
   createdAt: new Date('2026-07-12T10:00:00.000Z'),
   updatedAt: new Date('2026-07-12T10:00:00.000Z'),
+  post: visiblePost,
   author: {
     id: 1,
     firstName: 'John',
@@ -93,6 +96,7 @@ function createServiceFixture() {
     bumpCommentsVersion: [] as unknown[][],
     bumpFeedVersion: [] as unknown[][],
     deletePostCards: [] as unknown[][],
+    deleteCommentCards: [] as unknown[][],
     setCommentsPage: [] as unknown[][],
   };
 
@@ -118,6 +122,18 @@ function createServiceFixture() {
     post: {
       update: async (args: unknown) => {
         calls.postUpdate.push([args]);
+        return null;
+      },
+    },
+    commentLike: {
+      create: async (args: unknown) => {
+        calls.commentLikeCreate.push([args]);
+        commentLikeExists = true;
+        return null;
+      },
+      delete: async (args: unknown) => {
+        calls.commentLikeDelete.push([args]);
+        commentLikeExists = false;
         return null;
       },
     },
@@ -194,6 +210,9 @@ function createServiceFixture() {
     },
     getCommentCard: async () => cachedCommentCard,
     setCommentCard: async () => undefined,
+    deleteCommentCards: async (...args: unknown[]) => {
+      calls.deleteCommentCards.push(args);
+    },
   };
 
   const postCache = {
@@ -337,6 +356,6 @@ describe('CommentService', () => {
     expect(fixture.calls.commentLikeCreate.length).toBe(1);
     expect(fixture.calls.commentLikeDelete.length).toBe(1);
     expect(fixture.calls.commentUpdate.length).toBe(2);
-    expect(fixture.calls.deletePostCards.length).toBe(2);
+    expect(fixture.calls.deleteCommentCards.length).toBe(2);
   });
 });

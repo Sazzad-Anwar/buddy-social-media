@@ -1,3 +1,5 @@
+jest.mock('../db.service');
+
 import { NotFoundException } from '@nestjs/common';
 import { ReplyService } from './reply.service';
 import { Role } from '../enums/role.enum';
@@ -162,6 +164,18 @@ function createServiceFixture() {
         return null;
       },
     },
+    replyLike: {
+      create: async (args: unknown) => {
+        calls.replyLikeCreate.push([args]);
+        replyLikeExists = true;
+        return null;
+      },
+      delete: async (args: unknown) => {
+        calls.replyLikeDelete.push([args]);
+        replyLikeExists = false;
+        return null;
+      },
+    },
   };
 
   const db = {
@@ -180,6 +194,10 @@ function createServiceFixture() {
       findFirst: async (args: unknown) => {
         calls.replyFindFirst.push([args]);
         return visibleReplyResult;
+      },
+      findUnique: async (args: unknown) => {
+        calls.replyFindUnique.push([args]);
+        return createdReplyLookupResult;
       },
     },
     replyLike: {

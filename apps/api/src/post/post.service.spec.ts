@@ -1,3 +1,5 @@
+jest.mock('../db.service');
+
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PostService } from './post.service';
 import { Role } from '../enums/role.enum';

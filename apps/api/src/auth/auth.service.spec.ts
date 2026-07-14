@@ -1,3 +1,6 @@
+jest.mock('../db.service');
+jest.mock('bcrypt');
+
 import {
   BadRequestException,
   NotFoundException,
@@ -64,7 +67,7 @@ describe('AuthService.login', () => {
 
   it('should return access and refresh tokens on success', async () => {
     mockPrisma.users.findUnique.mockResolvedValue(createUserDto);
-    jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     jest
       .spyOn(authService, 'hashRefreshToken')
       .mockResolvedValue('refresh_token');
@@ -95,7 +98,7 @@ describe('AuthService.login', () => {
 
   it('Should throw BadRequestException when password does not match', async () => {
     mockPrisma.users.findUnique.mockResolvedValue(createUserDto);
-    jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+    (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
     await expect(authService.login(loginDto, userAgent)).rejects.toThrow(
       BadRequestException,
@@ -120,8 +123,8 @@ describe('AuthService.register', () => {
     const createdUser = { ...createUserDto, id: 2 };
     mockPrisma.users.create.mockResolvedValue(createdUser);
 
-    jest.spyOn(bcrypt, 'genSalt').mockResolvedValue('salt' as never);
-    jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashedPassword' as never);
+    (bcrypt.genSalt as jest.Mock).mockResolvedValue('salt');
+    (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
     jest
       .spyOn(authService, 'hashRefreshToken')
       .mockResolvedValue('refresh_token');

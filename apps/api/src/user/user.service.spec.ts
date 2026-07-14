@@ -1,3 +1,5 @@
+jest.mock('../db.service');
+
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { PrismaService } from '../db.service';
