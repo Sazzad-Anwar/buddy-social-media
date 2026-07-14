@@ -26,6 +26,6 @@
 # Deliverables
 
 - [x] GitHub repository link for code review.
-- [ ] A video walkthrough uploaded to YouTube (unlisted/private). Share the link and demonstrate your application as thoroughly as possible.
-- [ ] If possible (recommended), deploy the application to a live server and provide the live URL.
-- [ ] Include a brief documentation describing what you built and any decisions you made.
+- [x] A video walkthrough uploaded to YouTube (unlisted/private). Share the link and demonstrate your application as thoroughly as possible.
+- [x] If possible (recommended), deploy the application to a live server and provide the live URL.
+- [x] Include a brief documentation describing what you built and any decisions you made.

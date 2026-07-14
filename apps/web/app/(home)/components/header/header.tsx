@@ -142,7 +142,7 @@ export default function Header({ user }: Props) {
                       clipRule="evenodd"
                     />
                   </svg>{' '}
-                  <span className="_counting">2</span>
+                  {/*<span className="_counting">2</span>*/}
                 </Link>
               </li>
             </ul>

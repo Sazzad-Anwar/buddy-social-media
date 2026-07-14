@@ -54,7 +54,7 @@ export default function NotificationPanel() {
             clipRule="evenodd"
           />
         </svg>
-        <span className="_counting">6</span>
+        {/*<span className="_counting">6</span>*/}
       </button>
       <div className={cn('_notification_dropdown', isOpen ? 'show' : '')}>
         <div className="_notifications_content">
@@ -84,9 +84,7 @@ export default function NotificationPanel() {
                   </span>
                 </li>
                 <li className="_notification_item">
-                  <span className="_notification_link">
-                    Open Notifications
-                  </span>
+                  <span className="_notification_link">Open Notifications</span>
                 </li>
               </ul>
             </div>
