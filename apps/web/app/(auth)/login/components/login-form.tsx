@@ -5,7 +5,7 @@ import { LoginDto, loginSchema } from '@repo/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { cn } from 'lib/utils';
 import { loginAction } from 'app/(auth)/action';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function LoginForm() {
@@ -19,8 +19,35 @@ export default function LoginForm() {
     },
   });
 
+  const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('buddy_remember_me');
+    if (saved) {
+      try {
+        const { email, password } = JSON.parse(saved);
+        form.setValue('email', email);
+        form.setValue('password', password);
+        setRememberMe(true);
+      } catch {
+        localStorage.removeItem('buddy_remember_me');
+      }
+    }
+  }, [form]);
+
   const onSubmit = async (loginData: LoginDto) => {
     try {
+      if (rememberMe) {
+        localStorage.setItem(
+          'buddy_remember_me',
+          JSON.stringify({
+            email: loginData.email,
+            password: loginData.password,
+          }),
+        );
+      } else {
+        localStorage.removeItem('buddy_remember_me');
+      }
       await loginAction(loginData);
       router.push('/');
     } catch (error: unknown) {
@@ -106,13 +133,13 @@ export default function LoginForm() {
             <input
               className="form-check-input _social_login_form_check_input"
               type="radio"
-              name="flexRadioDefault"
-              id="flexRadioDefault2"
-              defaultChecked
+              id="rememberMe"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
             />
             <label
               className="form-check-label _social_login_form_check_label"
-              htmlFor="flexRadioDefault2"
+              htmlFor="rememberMe"
             >
               Remember me
             </label>
