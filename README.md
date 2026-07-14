@@ -6,6 +6,192 @@
 
 <p align="center">A full-stack social media platform built with Next.js and NestJS, designed from the ground up to handle millions of posts and reads. Think of it as a simplified version of social media feed where users can create posts, interact with each other through comments and likes, and control who sees their content.</p>
 
+## System Architecture
+
+```mermaid
+graph TB
+    subgraph Client
+        Browser["Browser"]
+    end
+
+    subgraph Frontend["Frontend - Next.js 16"]
+        SSR["Server Components"]
+        CSR["Client Components"]
+        SWR["SWR Data Fetching"]
+        Zustand["Zustand State"]
+    end
+
+    subgraph Backend["Backend - NestJS"]
+        AuthMod["Auth Module"]
+        PostMod["Post Module"]
+        CommentMod["Comment Module"]
+        ReplyMod["Reply Module"]
+        UserMod["User Module"]
+    end
+
+    subgraph DataLayer["Data Layer"]
+        Prisma["Prisma ORM"]
+        DB[("PostgreSQL - NeonDB")]
+        Redis[("Redis - Upstash")]
+    end
+
+    subgraph External["External Services"]
+        Uploadthing["Uploadthing"]
+        JWT["JWT Tokens"]
+    end
+
+    Browser --> SSR
+    Browser --> CSR
+    SSR --> Prisma
+    CSR --> SWR
+    CSR --> Zustand
+    SWR -->|HTTP| Backend
+    AuthMod --> Prisma
+    PostMod --> Prisma
+    CommentMod --> Prisma
+    ReplyMod --> Prisma
+    UserMod --> Prisma
+    Prisma --> DB
+    PostMod --> Redis
+    AuthMod --> JWT
+    PostMod --> Uploadthing
+```
+
+## Database Schema
+
+```mermaid
+erDiagram
+    USER {
+        string id PK
+        string name
+        string email UK
+        string password
+        string avatarUrl
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    POST {
+        string id PK
+        string authorId FK
+        string content
+        string imageUrl
+        enum visibility
+        int commentsCount
+        int likesCount
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    COMMENT {
+        string id PK
+        string authorId FK
+        string postId FK
+        string content
+        int likesCount
+        int repliesCount
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    REPLY {
+        string id PK
+        string authorId FK
+        string commentId FK
+        string content
+        int likesCount
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    POST_LIKE {
+        string id PK
+        string userId FK
+        string postId FK
+        datetime createdAt
+    }
+
+    COMMENT_LIKE {
+        string id PK
+        string userId FK
+        string commentId FK
+        datetime createdAt
+    }
+
+    REPLY_LIKE {
+        string id PK
+        string userId FK
+        string replyId FK
+        datetime createdAt
+    }
+
+    USER ||--o{ POST : creates
+    USER ||--o{ COMMENT : creates
+    USER ||--o{ REPLY : creates
+    POST ||--o{ COMMENT : has
+    POST ||--o{ POST_LIKE : has
+    COMMENT ||--o{ REPLY : has
+    COMMENT ||--o{ COMMENT_LIKE : has
+    REPLY ||--o{ REPLY_LIKE : has
+    USER ||--o{ POST_LIKE : gives
+    USER ||--o{ COMMENT_LIKE : gives
+    USER ||--o{ REPLY_LIKE : gives
+```
+
+## Request Flow
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as NestJS API
+    participant DB as PostgreSQL
+    participant Cache as Redis
+
+    Note over C,Cache: Login Request
+    C->>API: POST /auth/login (email, password)
+    API->>DB: Find user by email
+    DB-->>API: User record
+    API->>API: Compare bcrypt hash
+    API->>API: Generate JWT (access + refresh)
+    API->>C: Set httpOnly cookies + user data
+    API->>Cache: Invalidate feed cache
+
+    Note over C,Cache: Authenticated Request
+    C->>API: GET /posts (with JWT cookie)
+    API->>API: Validate JWT via Guard
+    API->>Cache: Check feed cache (version-based)
+    alt Cache HIT
+        Cache-->>API: Cached post IDs
+        API->>DB: Fetch full post data by IDs
+    else Cache MISS
+        API->>DB: Query posts with cursor pagination
+        API->>Cache: Store page in cache
+    end
+    DB-->>API: Post records
+    API-->>C: Paginated posts + cursor
+```
+
+### Optimistic Update Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant SWR as SWR Cache
+    participant API as NestJS API
+    participant DB as PostgreSQL
+
+    C->>SWR: Toggle like on post
+    SWR->>C: Update UI immediately (optimistic)
+    SWR->>API: POST /posts/:id/likes
+    API->>DB: Insert or delete like
+    API->>DB: Update likesCount
+    API-->>SWR: Success response
+    SWR->>SWR: Revalidate to confirm
+    Note over C,DB: On failure: rollback UI + restore original state
+```
+
 ## What It Does
 
 ### Authentication & Registration
