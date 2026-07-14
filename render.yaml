@@ -1,17 +1,16 @@
 services:
   # API Service (NestJS)
   - type: web
+    runtime: docker
     name: buddy-script-api
-    runtime: image
-    image:
-      url: https://github.com/Sazzad-Anwar/buddy-social-media.git
-      dockerfilePath: Dockerfile.api
-      dockerContext: .
+    repo: https://github.com/Sazzad-Anwar/buddy-social-media.git
+    dockerfilePath: Dockerfile.api
+    dockerContext: .
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: 10000
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
@@ -33,16 +32,16 @@ services:
 
   # Web Service (Next.js)
   - type: web
+    runtime: docker
     name: buddy-script-web
-    runtime: image
-    image:
-      url: https://github.com/Sazzad-Anwar/buddy-social-media.git
-      dockerfilePath: Dockerfile
-      dockerContext: .
-      target: web-production
+    repo: https://github.com/Sazzad-Anwar/buddy-social-media.git
+    dockerfilePath: Dockerfile
+    dockerContext: .
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 10000
       - key: API_URL
         fromService:
           name: buddy-script-api
