@@ -20,7 +20,7 @@ COPY packages/jest-config/package.json ./packages/jest-config/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
 
 # Install all dependencies
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # ============================================
 # Stage 3: Build shared packages and apps
