@@ -1,0 +1,62 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+.next
+**/.next
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+coverage
+**/coverage
+*.test.ts
+*.spec.ts
+__tests__
+
+# Documentation
+README.md
+*.md
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Railway
+railway.json
+
+# Turbo
+.turbo
+**/.turbo
+
+# Bun
+bun.lock
+
+# Logs
+*.log
+logs
+
+# Uploads
+uploads
+**/uploads
