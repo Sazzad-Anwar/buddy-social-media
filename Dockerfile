@@ -59,13 +59,17 @@ WORKDIR /app
 
 # Copy built API
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 
 # Copy built types package (needed at runtime)
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
 COPY --from=builder /app/packages/types/package.json ./packages/types/
+
+# Copy node_modules - bun hoists packages to root, so workspace node_modules
+# contains symlinks pointing to root node_modules/.bun/. We need both.
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 
 EXPOSE 3000
 
@@ -81,10 +85,14 @@ WORKDIR /app
 
 # Copy built Next.js app
 COPY --from=builder /app/apps/web/.next ./apps/web/.next
-COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=builder /app/apps/web/package.json ./apps/web/
 COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/apps/web/next.config.ts ./apps/web/
+
+# Copy node_modules - bun hoists packages to root, so workspace node_modules
+# contains symlinks pointing to root node_modules/.bun/. We need both.
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
 
 # Copy built types package (needed at runtime)
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
