@@ -87,7 +87,7 @@ export default function LoginPage() {
                 <h4 className="_social_login_content_title _titl4 _mar_b50">
                   Login to your account
                 </h4>
-                <button
+                {/*<button
                   type="button"
                   className="_social_login_content_btn _mar_b40"
                 >
@@ -102,7 +102,7 @@ export default function LoginPage() {
                 </button>
                 <div className="_social_login_content_bottom_txt _mar_b40">
                   <span>Or</span>
-                </div>
+                </div>*/}
                 <LoginForm />
                 <div className="row">
                   <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">

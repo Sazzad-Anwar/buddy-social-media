@@ -94,7 +94,7 @@ export default function RegistrationPage() {
                 <h4 className="_social_registration_content_title _titl4 _mar_b50">
                   Registration
                 </h4>
-                <button
+                {/*<button
                   type="button"
                   className="_social_registration_content_btn _mar_b40"
                 >
@@ -109,7 +109,7 @@ export default function RegistrationPage() {
                 </button>
                 <div className="_social_registration_content_bottom_txt _mar_b40">
                   <span>Or</span>
-                </div>
+                </div>*/}
                 <RegistrationForm />
                 <div className="row">
                   <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
